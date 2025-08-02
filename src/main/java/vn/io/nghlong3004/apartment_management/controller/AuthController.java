@@ -25,7 +25,8 @@ public class AuthController {
 	@PostMapping("/register")
 	public ResponseEntity<?> registerUser(@RequestBody RegisterRequest registerRequest) throws AppException {
 		userService.register(registerRequest);
-		return new ResponseEntity<>("", HttpStatus.CREATED);
+		String message = "User registered successfully!";
+		return new ResponseEntity<>(message, HttpStatus.CREATED);
 	}
 
 	@GetMapping("/test")
