@@ -4,7 +4,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
-import lombok.AllArgsConstructor;
+import lombok.RequiredArgsConstructor;
 import vn.io.nghlong3004.apartment_management.exception.AppException;
 import vn.io.nghlong3004.apartment_management.model.Role;
 import vn.io.nghlong3004.apartment_management.model.User;
@@ -12,8 +12,9 @@ import vn.io.nghlong3004.apartment_management.model.UserStatus;
 import vn.io.nghlong3004.apartment_management.model.dto.RegisterRequest;
 import vn.io.nghlong3004.apartment_management.repository.UserRepository;
 import vn.io.nghlong3004.apartment_management.service.UserService;
+import vn.io.nghlong3004.apartment_management.util.MessageUtil;
 
-@AllArgsConstructor
+@RequiredArgsConstructor
 @Service
 public class UserServiceImpl implements UserService {
 
@@ -23,20 +24,16 @@ public class UserServiceImpl implements UserService {
 	@Override
 	public void register(RegisterRequest registerRequest) {
 
-		String email = userRepository.existsByEmail(registerRequest.getEmail());
-		if (email != null) {
-			throw new AppException(HttpStatus.BAD_REQUEST, "Email may already be in use.");
+		int count = userRepository.existsByEmail(registerRequest.getEmail());
+		if (count > 0) {
+			throw new AppException(HttpStatus.BAD_REQUEST, MessageUtil.EXISTS_EMAIL);
 		}
 
-		User user = new User();
-		user.setFirstName(registerRequest.getFirstName());
-		user.setLastName(registerRequest.getLastName());
-		user.setEmail(registerRequest.getEmail());
-		user.setPhoneNumber(registerRequest.getPhoneNumber());
-		user.setPasswordHash(passwordEncoder.encode(registerRequest.getPassword()));
-		user.setRole(Role.USER);
-		user.setStatus(UserStatus.ACTIVE);
-		user.setFloor(null);
+		User user = User.builder().firstName(registerRequest.getFirstName()).lastName(registerRequest.getLastName())
+				.email(registerRequest.getEmail()).phoneNumber(registerRequest.getPhoneNumber())
+				.passwordHash(passwordEncoder.encode(registerRequest.getPassword())).role(Role.USER)
+				.status(UserStatus.ACTIVE).floor(null).build();
+
 		userRepository.save(user);
 	}
 

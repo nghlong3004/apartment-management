@@ -2,11 +2,11 @@ package vn.io.nghlong3004.apartment_management.model;
 
 import java.time.LocalDateTime;
 
+import lombok.Builder;
 import lombok.Data;
-import lombok.NoArgsConstructor;
 
 @Data
-@NoArgsConstructor
+@Builder
 public class User {
 	private Long id;
 	private String firstName;
