@@ -8,7 +8,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import jakarta.validation.Valid;
-import vn.io.nghlong3004.apartment_management.exception.AppException;
 import vn.io.nghlong3004.apartment_management.model.dto.RegisterRequest;
 import vn.io.nghlong3004.apartment_management.service.UserService;
 
@@ -23,10 +22,12 @@ public class AuthController {
 	}
 
 	@PostMapping("/register")
-	public ResponseEntity<?> registerUser(@Valid @RequestBody RegisterRequest registerRequest) throws AppException {
-		userService.register(registerRequest);
-		String message = "User registered successfully!";
-		return new ResponseEntity<>(message, HttpStatus.CREATED);
+	public ResponseEntity<String> registerUser(@Valid @RequestBody RegisterRequest registerRequest) {
+		if (userService.register(registerRequest)) {
+			return ResponseEntity.status(HttpStatus.CREATED).body("User registered successfully!");
+		}
+
+		return ResponseEntity.badRequest().body("Email may already be in use.");
 	}
 
 }
