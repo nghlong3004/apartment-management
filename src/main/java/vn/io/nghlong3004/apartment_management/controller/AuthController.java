@@ -2,7 +2,6 @@ package vn.io.nghlong3004.apartment_management.controller;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -27,12 +26,6 @@ public class AuthController {
 		userService.register(registerRequest);
 		String message = "User registered successfully!";
 		return new ResponseEntity<>(message, HttpStatus.CREATED);
-	}
-
-	@GetMapping("/test")
-	public String test() {
-
-		return "test...";
 	}
 
 }
