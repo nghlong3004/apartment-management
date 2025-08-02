@@ -1,11 +1,7 @@
 package vn.io.nghlong3004.apartment_management.exception;
 
-import java.util.HashMap;
-import java.util.Map;
-
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -17,22 +13,23 @@ public class GlobalExceptionHandler {
 
 	@ExceptionHandler(AppException.class)
 	public ResponseEntity<ErrorResponse> handleBaseException(AppException appException) {
+		System.out.println(appException.getMessage());
 		ErrorResponse errorResponse = new ErrorResponse(appException.getHttpStatus().value(),
 				appException.getMessage());
 		return new ResponseEntity<>(errorResponse, appException.getHttpStatus());
 	}
 
 	@ExceptionHandler(MethodArgumentNotValidException.class)
-	public ResponseEntity<Map<String, String>> handleValidationExceptions(MethodArgumentNotValidException exception) {
-		Map<String, String> errors = new HashMap<>();
-
+	public ResponseEntity<ErrorResponse> handleValidationExceptions(MethodArgumentNotValidException exception) {
+		StringBuilder message = new StringBuilder();
 		exception.getBindingResult().getAllErrors().forEach((error) -> {
-			String fieldName = ((FieldError) error).getField();
 			String errorMessage = error.getDefaultMessage();
-			errors.put(fieldName, errorMessage);
-		});
+			message.append(errorMessage + " ");
 
-		return new ResponseEntity<>(errors, HttpStatus.BAD_REQUEST);
+		});
+		ErrorResponse errorResponse = new ErrorResponse(400, new String(message));
+
+		return new ResponseEntity<>(errorResponse, HttpStatus.BAD_REQUEST);
 	}
 
 }

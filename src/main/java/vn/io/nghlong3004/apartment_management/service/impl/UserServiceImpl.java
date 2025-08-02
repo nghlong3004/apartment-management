@@ -1,9 +1,11 @@
 package vn.io.nghlong3004.apartment_management.service.impl;
 
+import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import lombok.AllArgsConstructor;
+import vn.io.nghlong3004.apartment_management.exception.AppException;
 import vn.io.nghlong3004.apartment_management.model.Role;
 import vn.io.nghlong3004.apartment_management.model.User;
 import vn.io.nghlong3004.apartment_management.model.UserStatus;
@@ -19,11 +21,11 @@ public class UserServiceImpl implements UserService {
 	private final PasswordEncoder passwordEncoder;
 
 	@Override
-	public boolean register(RegisterRequest registerRequest) {
+	public void register(RegisterRequest registerRequest) {
 
 		String email = userRepository.existsByEmail(registerRequest.getEmail());
 		if (email != null) {
-			return false;
+			throw new AppException(HttpStatus.BAD_REQUEST, "Email may already be in use.");
 		}
 
 		User user = new User();
@@ -36,8 +38,6 @@ public class UserServiceImpl implements UserService {
 		user.setStatus(UserStatus.ACTIVE);
 		user.setFloor(null);
 		userRepository.save(user);
-
-		return true;
 	}
 
 }
