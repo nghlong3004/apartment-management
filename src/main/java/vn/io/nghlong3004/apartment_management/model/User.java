@@ -17,6 +17,6 @@ public class User {
 	private Role role;
 	private UserStatus status;
 	private Floor floor;
-	private Timestamp reated;
+	private Timestamp created;
 	private Timestamp updated;
 }
