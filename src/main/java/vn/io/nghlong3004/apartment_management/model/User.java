@@ -1,6 +1,6 @@
 package vn.io.nghlong3004.apartment_management.model;
 
-import java.time.LocalDateTime;
+import java.sql.Timestamp;
 
 import lombok.Builder;
 import lombok.Data;
@@ -12,11 +12,11 @@ public class User {
 	private String firstName;
 	private String lastName;
 	private String email;
-	private String passwordHash;
+	private String password;
 	private String phoneNumber;
 	private Role role;
 	private UserStatus status;
 	private Floor floor;
-	private LocalDateTime created;
-	private LocalDateTime updated;
+	private Timestamp reated;
+	private Timestamp updated;
 }
