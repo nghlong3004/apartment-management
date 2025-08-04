@@ -18,7 +18,7 @@ public interface UserRepository {
 
 	@Insert("""
 			INSERT INTO floor_user(first_name, last_name, email, password_hash, phone_number, role, status)
-			VALUES(#{firstName}, #{lastName}, #{email}, #{passwordHash}, #{phoneNumber}, #{role}::user_role, #{status}::user_status)
+			VALUES(#{firstName}, #{lastName}, #{email}, #{password}, #{phoneNumber}, #{role}::user_role, #{status}::user_status)
 			""")
 	public void save(User user);
 
