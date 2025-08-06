@@ -27,7 +27,7 @@ public class SecurityConfig {
 
 		httpSecurity.sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
 				.csrf(csrf -> csrf.csrfTokenRequestHandler(csrfTokenRequestAttributeHandler)
-						.ignoringRequestMatchers("/api/v1/auth/register", "/api/v1/auth/login")
+						.ignoringRequestMatchers("/api/v1/auth/**")
 						.csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse()))
 				.authorizeHttpRequests(auth -> auth.requestMatchers("/api/v1/auth/**").permitAll());
 

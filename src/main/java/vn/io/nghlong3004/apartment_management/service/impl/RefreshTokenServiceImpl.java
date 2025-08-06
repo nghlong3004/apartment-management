@@ -27,9 +27,8 @@ public class RefreshTokenServiceImpl implements RefreshTokenService {
 	@Override
 	public RefreshToken createRefreshToken(Long userId) {
 		refreshTokenRepository.deleteByUserId(userId);
-		RefreshToken refreshToken = new RefreshToken();
-		refreshToken.setToken(UUID.randomUUID().toString());
-		refreshToken.setExpiryDate(Instant.now().plusMillis(ApplicationConstants.EXPIRY_DATE_REFRESH_TOKEN_MS));
+		RefreshToken refreshToken = RefreshToken.builder().token(UUID.randomUUID().toString())
+				.expiryDate(Instant.now().plusMillis(ApplicationConstants.EXPIRY_DATE_REFRESH_TOKEN_MS)).build();
 
 		refreshTokenRepository.save(userId, refreshToken.getToken(), refreshToken.getExpiryDate());
 
@@ -37,12 +36,11 @@ public class RefreshTokenServiceImpl implements RefreshTokenService {
 	}
 
 	@Override
-	public RefreshToken verifyExpiration(RefreshToken token) {
+	public void verifyExpiration(RefreshToken token) {
 		if (token.getExpiryDate().isBefore(Instant.now())) {
 			refreshTokenRepository.deleteByUserId(token.getUserId());
 			throw new TokenRefreshException();
 		}
-		return token;
 	}
 
 }
