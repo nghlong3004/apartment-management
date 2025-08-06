@@ -7,6 +7,7 @@ public final class MessageConstants {
 	public static final String DATABASE_EXCEPTION = "Data conflicts or constraint violations.";
 	public static final String LOGIN_FALSE = "Incorrect email or password.";
 
+	public static final String ERROR_REFRESH_TOKEN = "Refresh Token expired or not available.";
 	public static final String ERROR_GENERATE_TOKEN = "Token generation error.";
 
 }

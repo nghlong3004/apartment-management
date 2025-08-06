@@ -51,7 +51,11 @@ public class UserServiceImpl implements UserService {
 		User user = userRepository.findByEmail(loginRequest.getEmail())
 				.orElseThrow(() -> new AccountResourcesException());
 
-		return generateToken(user);
+		String accessToken = jwtTokenProvider.generateToken(user.getEmail(), user.getRole().name());
+
+		RefreshToken refreshToken = refreshTokenService.createRefreshToken(user.getId());
+
+		return Token.builder().accessToken(accessToken).refreshToken(refreshToken.getToken()).build();
 	}
 
 	@Override
@@ -62,7 +66,9 @@ public class UserServiceImpl implements UserService {
 		User user = userRepository.findById(refreshToken.getUserId())
 				.orElseThrow(() -> new AccountResourcesException());
 
-		return generateToken(user);
+		String accessToken = jwtTokenProvider.generateToken(user.getEmail(), user.getRole().name());
+
+		return Token.builder().accessToken(accessToken).refreshToken(refreshToken.getToken()).build();
 	}
 
 	@Override
@@ -70,14 +76,6 @@ public class UserServiceImpl implements UserService {
 		ResponseCookie responseCookie = ResponseCookie.from("refresh_token", refreshToken).httpOnly(true).secure(true)
 				.path("/").maxAge(ApplicationConstants.EXPIRY_DATE_REFRESH_TOKEN_MS / 1000).sameSite("Strict").build();
 		return responseCookie;
-	}
-
-	private Token generateToken(User user) {
-		String accessToken = jwtTokenProvider.generateToken(user.getEmail(), user.getRole().name());
-
-		RefreshToken refreshToken = refreshTokenService.createRefreshToken(user.getId());
-
-		return Token.builder().accessToken(accessToken).refreshToken(refreshToken.getToken()).build();
 	}
 
 	private RefreshToken getRefreshToken(String requestRefreshToken) {
