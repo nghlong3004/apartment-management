@@ -7,8 +7,8 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
+import vn.io.nghlong3004.apartment_management.constants.MessageConstants;
 import vn.io.nghlong3004.apartment_management.model.dto.ErrorResponse;
-import vn.io.nghlong3004.apartment_management.util.MessageConstants;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
@@ -26,8 +26,8 @@ public class GlobalExceptionHandler {
 		return handleException(HttpStatus.CONFLICT, MessageConstants.DATABASE_EXCEPTION);
 	}
 
-	@ExceptionHandler(AppException.class)
-	public ResponseEntity<ErrorResponse> handleBaseException(AppException appException) {
+	@ExceptionHandler(ResourceException.class)
+	public ResponseEntity<ErrorResponse> handleBaseException(ResourceException appException) {
 
 		return handleException(appException.getHttpStatus(), appException.getMessage());
 	}

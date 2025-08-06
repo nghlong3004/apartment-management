@@ -5,11 +5,11 @@ import org.springframework.http.HttpStatus;
 import lombok.Getter;
 
 @Getter
-public class AppException extends RuntimeException {
+public class ResourceException extends RuntimeException {
 	private final HttpStatus httpStatus;
 	private final String message;
 
-	public AppException(HttpStatus httpStatus, String message) {
+	public ResourceException(HttpStatus httpStatus, String message) {
 		super(message);
 		this.httpStatus = httpStatus;
 		this.message = message;

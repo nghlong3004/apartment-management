@@ -1,25 +1,31 @@
 package vn.io.nghlong3004.apartment_management.service.impl;
 
-import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import lombok.RequiredArgsConstructor;
-import vn.io.nghlong3004.apartment_management.exception.AppException;
+import vn.io.nghlong3004.apartment_management.exception.AccountResourcesException;
+import vn.io.nghlong3004.apartment_management.exception.EmailResourceException;
+import vn.io.nghlong3004.apartment_management.model.RefreshToken;
 import vn.io.nghlong3004.apartment_management.model.Role;
 import vn.io.nghlong3004.apartment_management.model.User;
 import vn.io.nghlong3004.apartment_management.model.UserStatus;
+import vn.io.nghlong3004.apartment_management.model.dto.LoginRequest;
 import vn.io.nghlong3004.apartment_management.model.dto.RegisterRequest;
+import vn.io.nghlong3004.apartment_management.model.dto.Token;
 import vn.io.nghlong3004.apartment_management.repository.UserRepository;
+import vn.io.nghlong3004.apartment_management.security.JWTTokenProvider;
+import vn.io.nghlong3004.apartment_management.service.RefreshTokenService;
 import vn.io.nghlong3004.apartment_management.service.UserService;
-import vn.io.nghlong3004.apartment_management.util.MessageConstants;
 
-@RequiredArgsConstructor
 @Service
+@RequiredArgsConstructor
 public class UserServiceImpl implements UserService {
 
 	private final UserRepository userRepository;
 	private final PasswordEncoder passwordEncoder;
+	private final JWTTokenProvider jwtTokenProvider;
+	private final RefreshTokenService refreshTokenService;
 
 	@Override
 	public void register(RegisterRequest registerRequest) {
@@ -34,9 +40,32 @@ public class UserServiceImpl implements UserService {
 		userRepository.save(user);
 	}
 
+	@Override
+	public Token login(LoginRequest loginRequest) {
+
+		validateAccount(loginRequest);
+
+		User user = userRepository.findByEmail(loginRequest.getEmail())
+				.orElseThrow(() -> new AccountResourcesException());
+
+		String accessToken = jwtTokenProvider.generateToken(user.getEmail(), user.getRole().name());
+
+		RefreshToken refreshToken = refreshTokenService.createRefreshToken(user.getId());
+
+		return Token.builder().accessToken(accessToken).refreshToken(refreshToken.getToken()).build();
+	}
+
+	private void validateAccount(LoginRequest loginRequest) {
+		String passwordHash = userRepository.findPasswordByEmail(loginRequest.getEmail())
+				.orElseThrow(() -> new AccountResourcesException());
+		if (!passwordEncoder.matches(loginRequest.getPassword(), passwordHash)) {
+			throw new AccountResourcesException();
+		}
+	}
+
 	private void validateEmail(RegisterRequest registerRequest) {
 		if (userRepository.existsByEmail(registerRequest.getEmail()).orElse(false)) {
-			throw new AppException(HttpStatus.BAD_REQUEST, MessageConstants.EXISTS_EMAIL);
+			throw new EmailResourceException();
 		}
 	}
 
