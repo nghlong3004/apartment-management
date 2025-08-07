@@ -35,7 +35,7 @@ class UserRepositoryTest {
 
 	@Test
 	@DisplayName("Method: ExitstByEmail -> False")
-	void UserRepository_ExistsByEmail_WhenEmailDoesNotExistShould_ReturnFalse() {
+	void existsByEmail_WhenEmailDoesNotExistShould_ReturnFalse() {
 
 		for (int i = 0; i < maxTestCaseAll; ++i) {
 			String username = UUID.randomUUID().toString();
@@ -46,7 +46,7 @@ class UserRepositoryTest {
 
 	@Test
 	@DisplayName("Method: ExitstByEmail -> True")
-	void UserRepository_ExistsByEmail_WhenEmailExistsShould_ReturnTrue() {
+	void existsByEmail_WhenEmailExistsShould_ReturnTrue() {
 		System.out.println(Instant.now().getEpochSecond());
 		System.out
 				.println(Instant.now().plusMillis(ApplicationConstants.EXPIRY_DATE_REFRESH_TOKEN_MS).getEpochSecond());
@@ -63,7 +63,7 @@ class UserRepositoryTest {
 
 	@Test
 	@DisplayName("Method: FindByEmail -> User")
-	void UserRepository_FindByEmail_WhenEmailExistsShould_ReturnUserByEmail() {
+	void findByEmail_WhenEmailExistsShould_ReturnUserByEmail() {
 		for (int i = 0; i < maxTestCaseAll; ++i) {
 			String username = UUID.randomUUID().toString();
 
@@ -82,7 +82,7 @@ class UserRepositoryTest {
 
 	@Test
 	@DisplayName("Method: FindByEmail -> Null")
-	void UserRepository_FindByEmail_WhenEmailExistsShould_ReturnNull() {
+	void findByEmail_WhenEmailExistsShould_ReturnNull() {
 		for (int i = 0; i < maxTestCaseAll; ++i) {
 			String username = UUID.randomUUID().toString();
 

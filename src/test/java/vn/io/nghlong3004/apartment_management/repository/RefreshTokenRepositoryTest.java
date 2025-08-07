@@ -46,7 +46,7 @@ public class RefreshTokenRepositoryTest {
 
 	@Test
 	@DisplayName("Method: FindByToken -> Null")
-	void RefreshTokenRepository_FindByToken_WhenTokenDoesNotExistShould_ReturnNull() {
+	void findByToken_WhenTokenDoesNotExistShould_ReturnNull() {
 		for (int i = 0; i < maxTestCaseAll; ++i) {
 			String token = UUID.randomUUID().toString();
 			RefreshToken refreshToken = refreshTokenRepository.findByToken(token).orElse(null);
@@ -56,7 +56,7 @@ public class RefreshTokenRepositoryTest {
 
 	@Test
 	@DisplayName("Method: FindByToken -> RefreshToken")
-	void RefreshTokenRepository_FindByToken_WhenTokenDoesNotExistShould_ReturnRefreshToken() {
+	void findByToken_WhenTokenDoesNotExistShould_ReturnRefreshToken() {
 		for (int i = 0; i < maxTestCaseAll; ++i) {
 			RefreshToken oldRefreshToken = createRefreshToken();
 			refreshTokenRepository.save(oldRefreshToken.getUserId(), oldRefreshToken.getToken(),
@@ -74,7 +74,7 @@ public class RefreshTokenRepositoryTest {
 
 	@Test
 	@DisplayName("Method: DeleteByUserId")
-	void RefreshTokenRepository_DeleteByUserId_ShouldDeleteRefreshTokenByUserId() {
+	void deleteByUserId_ShouldDeleteRefreshTokenByUserId() {
 		for (int i = 0; i < maxTestCaseAll; ++i) {
 			RefreshToken oldRefreshToken = createRefreshToken();
 			refreshTokenRepository.save(oldRefreshToken.getUserId(), oldRefreshToken.getToken(),
