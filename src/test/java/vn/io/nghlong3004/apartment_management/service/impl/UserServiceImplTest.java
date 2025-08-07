@@ -1,8 +1,13 @@
 package vn.io.nghlong3004.apartment_management.service.impl;
 
+import static vn.io.nghlong3004.apartment_management.util.GenerateUtil.generateEmail;
+import static vn.io.nghlong3004.apartment_management.util.GenerateUtil.generateFirstName;
+import static vn.io.nghlong3004.apartment_management.util.GenerateUtil.generateLastName;
+import static vn.io.nghlong3004.apartment_management.util.GenerateUtil.generatePassword;
+import static vn.io.nghlong3004.apartment_management.util.GenerateUtil.generatePhoneNumber;
+
 import java.time.Instant;
 import java.util.Optional;
-import java.util.Random;
 import java.util.UUID;
 
 import org.junit.jupiter.api.Assertions;
@@ -73,59 +78,6 @@ class UserServiceImplTest {
 	private RefreshToken createSampleRefreshToken(User user) {
 		return RefreshToken.builder().id(1L).userId(user.getId()).token(UUID.randomUUID().toString())
 				.expiryDate(Instant.now().plusMillis(ApplicationConstants.EXPIRY_DATE_REFRESH_TOKEN_MS)).build();
-	}
-
-	private String generateFirstName() {
-		Random random = new Random();
-		String firstName = "";
-		// random first name
-		for (int i = 0, n = random.nextInt() % 15 + 4; i < n; ++i) {
-			firstName += (char) (random.nextInt() % 26 + 'a');
-		}
-		return firstName;
-	}
-
-	private String generateLastName() {
-		Random random = new Random();
-		String lastName = "";
-		// random first name
-		for (int i = 0, n = random.nextInt() % 15 + 4; i < n; ++i) {
-			lastName += (char) (random.nextInt() % 26 + 'a');
-		}
-		return lastName;
-	}
-
-	private String generateEmail() {
-		Random random = new Random();
-		String email = "";
-		// random email
-		for (int i = 0, n = random.nextInt() % 50 + 1; i < n; ++i) {
-			email += (char) (random.nextInt() % 26 + 'a');
-		}
-		email += "@example.com";
-		return email;
-	}
-
-	private String generatePassword() {
-		Random random = new Random();
-
-		String password = "";
-		// random password
-		for (int i = 0, n = random.nextInt() % 50 + 1; i < n; ++i) {
-			password += (char) (random.nextInt() % 26 + 'a');
-		}
-		return password;
-	}
-
-	private String generatePhoneNumber() {
-		Random random = new Random();
-
-		String phoneNumber = "";
-		// random phone number
-		for (int i = 0; i < 10; ++i) {
-			phoneNumber += (char) (random.nextInt() % 10 + '0');
-		}
-		return phoneNumber;
 	}
 
 	@Test
