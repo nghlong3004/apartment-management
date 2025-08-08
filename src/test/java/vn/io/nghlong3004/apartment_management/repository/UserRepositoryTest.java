@@ -1,6 +1,5 @@
 package vn.io.nghlong3004.apartment_management.repository;
 
-import java.time.Instant;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -9,10 +8,10 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.mybatis.spring.boot.test.autoconfigure.MybatisTest;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
 import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase.Replace;
 
-import vn.io.nghlong3004.apartment_management.constants.ApplicationConstants;
 import vn.io.nghlong3004.apartment_management.model.Role;
 import vn.io.nghlong3004.apartment_management.model.User;
 import vn.io.nghlong3004.apartment_management.model.UserStatus;
@@ -20,6 +19,9 @@ import vn.io.nghlong3004.apartment_management.model.UserStatus;
 @MybatisTest
 @AutoConfigureTestDatabase(replace = Replace.NONE)
 class UserRepositoryTest {
+
+	@Value("${jwt.refresh-token-expiration-ms}")
+	private String REFRESH_TOKEN_EXPIRATION_MS;
 
 	@Autowired
 	private UserRepository userRepository;
@@ -47,9 +49,6 @@ class UserRepositoryTest {
 	@Test
 	@DisplayName("Method: ExitstByEmail -> True")
 	void existsByEmail_WhenEmailExistsShould_ReturnTrue() {
-		System.out.println(Instant.now().getEpochSecond());
-		System.out
-				.println(Instant.now().plusMillis(ApplicationConstants.EXPIRY_DATE_REFRESH_TOKEN_MS).getEpochSecond());
 		for (int i = 0; i < maxTestCaseAll; ++i) {
 			String username = UUID.randomUUID().toString();
 

@@ -1,11 +1,11 @@
 package vn.io.nghlong3004.apartment_management.service.impl;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseCookie;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import lombok.RequiredArgsConstructor;
-import vn.io.nghlong3004.apartment_management.constants.ApplicationConstants;
 import vn.io.nghlong3004.apartment_management.exception.AccountResourcesException;
 import vn.io.nghlong3004.apartment_management.exception.EmailResourceException;
 import vn.io.nghlong3004.apartment_management.exception.TokenRefreshException;
@@ -24,6 +24,9 @@ import vn.io.nghlong3004.apartment_management.service.UserService;
 @Service
 @RequiredArgsConstructor
 public class UserServiceImpl implements UserService {
+
+	@Value("${jwt.refresh-token-expiration-ms}")
+	private String REFRESH_TOKEN_EXPIRATION_MS;
 
 	private final UserRepository userRepository;
 	private final PasswordEncoder passwordEncoder;
@@ -74,7 +77,7 @@ public class UserServiceImpl implements UserService {
 	@Override
 	public ResponseCookie getResponseCookieRefreshToken(String refreshToken) {
 		ResponseCookie responseCookie = ResponseCookie.from("refresh_token", refreshToken).httpOnly(true).secure(true)
-				.path("/").maxAge(ApplicationConstants.EXPIRY_DATE_REFRESH_TOKEN_MS / 1000).sameSite("Strict").build();
+				.path("/").maxAge(Long.parseLong(REFRESH_TOKEN_EXPIRATION_MS) / 1000).sameSite("Strict").build();
 		return responseCookie;
 	}
 

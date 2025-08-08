@@ -13,15 +13,18 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.mybatis.spring.boot.test.autoconfigure.MybatisTest;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
 import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase.Replace;
 
-import vn.io.nghlong3004.apartment_management.constants.ApplicationConstants;
 import vn.io.nghlong3004.apartment_management.model.RefreshToken;
 
 @MybatisTest
 @AutoConfigureTestDatabase(replace = Replace.NONE)
 public class RefreshTokenRepositoryTest {
+
+	@Value("${jwt.refresh-token-expiration-ms}")
+	private String REFRESH_TOKEN_EXPIRATION_MS;
 
 	@Autowired
 	private RefreshTokenRepository refreshTokenRepository;
@@ -37,8 +40,7 @@ public class RefreshTokenRepositoryTest {
 		String token = UUID.randomUUID().toString();
 
 		RefreshToken refreshToken = RefreshToken.builder().userId(userId).token(token)
-				.expiryDate(
-						Instant.now(Clock.systemUTC()).plusMillis(ApplicationConstants.EXPIRY_DATE_REFRESH_TOKEN_MS))
+				.expiryDate(Instant.now(Clock.systemUTC()).plusMillis(Long.parseLong(REFRESH_TOKEN_EXPIRATION_MS)))
 				.build();
 
 		return refreshToken;

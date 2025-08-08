@@ -20,11 +20,11 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseCookie;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
-import vn.io.nghlong3004.apartment_management.constants.ApplicationConstants;
 import vn.io.nghlong3004.apartment_management.constants.MessageConstants;
 import vn.io.nghlong3004.apartment_management.exception.AccountResourcesException;
 import vn.io.nghlong3004.apartment_management.exception.ResourceException;
@@ -42,6 +42,9 @@ import vn.io.nghlong3004.apartment_management.service.RefreshTokenService;
 
 @ExtendWith(MockitoExtension.class)
 class UserServiceImplTest {
+
+	@Value("${jwt.refresh-token-expiration-ms}")
+	private String REFRESH_TOKEN_EXPIRATION_MS;
 
 	@Mock
 	private UserRepository mockUserRepository;
@@ -77,7 +80,7 @@ class UserServiceImplTest {
 
 	private RefreshToken createSampleRefreshToken(User user) {
 		return RefreshToken.builder().id(1L).userId(user.getId()).token(UUID.randomUUID().toString())
-				.expiryDate(Instant.now().plusMillis(ApplicationConstants.EXPIRY_DATE_REFRESH_TOKEN_MS)).build();
+				.expiryDate(Instant.now().plusMillis(Long.parseLong(REFRESH_TOKEN_EXPIRATION_MS))).build();
 	}
 
 	@Test
@@ -208,7 +211,7 @@ class UserServiceImplTest {
 	void getResponseCookieRefreshToken_WhenCalled_ShouldReturnCorrectCookie() {
 		for (int i = 0; i < maxTestCase; ++i) {
 			String refreshTokenValue = UUID.randomUUID().toString();
-			long maxAgeInSeconds = ApplicationConstants.EXPIRY_DATE_REFRESH_TOKEN_MS / 1000;
+			long maxAgeInSeconds = Long.parseLong(REFRESH_TOKEN_EXPIRATION_MS) / 1000;
 
 			ResponseCookie cookie = userServiceImpl.getResponseCookieRefreshToken(refreshTokenValue);
 
