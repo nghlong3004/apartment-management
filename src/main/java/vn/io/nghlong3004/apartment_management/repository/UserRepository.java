@@ -22,4 +22,21 @@ public interface UserRepository {
 			""")
 	public void save(User user);
 
+	@Select("""
+			SELECT id, first_name AS firstName, last_name AS lastName, email, password_hash AS password, phone_number AS phoneNumber,
+			role, status, floor_id, created, updated FROM floor_user WHERE email = #{email}
+			""")
+	public Optional<User> findByEmail(String email);
+
+	@Select("""
+			SELECT password_hash AS password FROM floor_user WHERE email = #{email}
+			""")
+	public Optional<String> findPasswordByEmail(String email);
+
+	@Select("""
+			SELECT id, first_name AS firstName, last_name AS lastName, email, password_hash AS password, phone_number AS phoneNumber,
+			role, status, floor_id, created, updated FROM floor_user WHERE id = #{userId}
+			""")
+	public Optional<User> findById(Long userId);
+
 }
