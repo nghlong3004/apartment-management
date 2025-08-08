@@ -21,14 +21,11 @@ import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseCookie;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
-import vn.io.nghlong3004.apartment_management.constants.MessageConstants;
-import vn.io.nghlong3004.apartment_management.exception.AccountResourcesException;
+import vn.io.nghlong3004.apartment_management.exception.ErrorState;
 import vn.io.nghlong3004.apartment_management.exception.ResourceException;
-import vn.io.nghlong3004.apartment_management.exception.TokenRefreshException;
 import vn.io.nghlong3004.apartment_management.model.RefreshToken;
 import vn.io.nghlong3004.apartment_management.model.Role;
 import vn.io.nghlong3004.apartment_management.model.User;
@@ -118,8 +115,7 @@ class UserServiceImplTest {
 				userServiceImpl.register(request);
 			});
 
-			Assertions.assertEquals(exception.getHttpStatus(), HttpStatus.BAD_REQUEST);
-			Assertions.assertEquals(exception.getMessage(), MessageConstants.EXISTS_EMAIL);
+			Assertions.assertEquals(exception.getErrorState(), ErrorState.EXISTS_EMAIL);
 		}
 	}
 
@@ -130,7 +126,7 @@ class UserServiceImplTest {
 			LoginRequest loginRequest = createSampleLoginRequest();
 			Mockito.when(mockUserRepository.findPasswordByEmail(loginRequest.getEmail())).thenReturn(Optional.empty());
 
-			Assertions.assertThrows(AccountResourcesException.class, () -> {
+			Assertions.assertThrows(ResourceException.class, () -> {
 				userServiceImpl.login(loginRequest);
 			});
 		}
@@ -146,7 +142,7 @@ class UserServiceImplTest {
 					.thenReturn(Optional.of(user.getPassword()));
 			Mockito.when(mockPasswordEncoder.matches(loginRequest.getPassword(), user.getPassword())).thenReturn(false);
 
-			Assertions.assertThrows(AccountResourcesException.class, () -> {
+			Assertions.assertThrows(ResourceException.class, () -> {
 				userServiceImpl.login(loginRequest);
 			});
 		}
@@ -182,7 +178,7 @@ class UserServiceImplTest {
 			String invalidToken = UUID.randomUUID().toString();
 			Mockito.when(mockRefreshTokenService.findByToken(invalidToken)).thenReturn(Optional.empty());
 
-			Assertions.assertThrows(TokenRefreshException.class, () -> {
+			Assertions.assertThrows(ResourceException.class, () -> {
 				userServiceImpl.refresh(invalidToken);
 			});
 		}
@@ -200,7 +196,7 @@ class UserServiceImplTest {
 			Mockito.doNothing().when(mockRefreshTokenService).verifyExpiration(refreshToken);
 			Mockito.when(mockUserRepository.findById(user.getId())).thenReturn(Optional.empty());
 
-			Assertions.assertThrows(AccountResourcesException.class, () -> {
+			Assertions.assertThrows(ResourceException.class, () -> {
 				userServiceImpl.refresh(refreshToken.getToken());
 			});
 		}

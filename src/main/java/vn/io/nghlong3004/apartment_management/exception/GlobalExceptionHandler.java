@@ -8,7 +8,6 @@ import org.springframework.web.bind.MissingRequestCookieException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
-import vn.io.nghlong3004.apartment_management.constants.MessageConstants;
 import vn.io.nghlong3004.apartment_management.model.dto.ErrorResponse;
 
 @RestControllerAdvice
@@ -18,37 +17,37 @@ public class GlobalExceptionHandler {
 	public ResponseEntity<ErrorResponse> handleUnwantedException(Exception exception) {
 		exception.printStackTrace();
 
-		return handleException(HttpStatus.INTERNAL_SERVER_ERROR, MessageConstants.UNWANTED_EXCEPTION);
+		ErrorState errorState = ErrorState.UNWANTED_EXCEPTION;
+
+		return handleException(errorState.getStatus(), errorState.getMessage());
 	}
 
 	@ExceptionHandler(MissingRequestCookieException.class)
 	public ResponseEntity<ErrorResponse> handleMissingRequestCookieException(MissingRequestCookieException exception) {
 
-		return handleException(HttpStatus.BAD_REQUEST, MessageConstants.ERROR_REFRESH_TOKEN);
+		ErrorState errorState = ErrorState.ERROR_REFRESH_TOKEN;
+
+		return handleException(errorState.getStatus(), errorState.getMessage());
 	}
 
 	@ExceptionHandler(DataIntegrityViolationException.class)
 	public ResponseEntity<ErrorResponse> handleDataIntegrityViolation(DataIntegrityViolationException exception) {
 
-		return handleException(HttpStatus.CONFLICT, MessageConstants.DATABASE_EXCEPTION);
+		ErrorState errorState = ErrorState.DATABASE_EXCEPTION;
+
+		return handleException(errorState.getStatus(), errorState.getMessage());
 	}
 
 	@ExceptionHandler(ResourceException.class)
-	public ResponseEntity<ErrorResponse> handleBaseException(ResourceException appException) {
+	public ResponseEntity<ErrorResponse> handleBaseException(ResourceException exception) {
 
-		return handleException(appException.getHttpStatus(), appException.getMessage());
+		return handleException(exception.getErrorState().getStatus(), exception.getMessage());
 	}
 
 	@ExceptionHandler(MethodArgumentNotValidException.class)
 	public ResponseEntity<ErrorResponse> handleValidationException(MethodArgumentNotValidException exception) {
 
 		return handleException(HttpStatus.BAD_REQUEST, generateMessage(exception));
-	}
-
-	@ExceptionHandler(TokenRefreshException.class)
-	public ResponseEntity<ErrorResponse> handleTokenRefreshException(TokenRefreshException exception) {
-
-		return handleException(HttpStatus.BAD_REQUEST, MessageConstants.REFRESH_TOKEN_EXPIRED);
 	}
 
 	private ResponseEntity<ErrorResponse> handleException(HttpStatus httpStatus, String message) {

@@ -6,9 +6,8 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import lombok.RequiredArgsConstructor;
-import vn.io.nghlong3004.apartment_management.exception.AccountResourcesException;
-import vn.io.nghlong3004.apartment_management.exception.EmailResourceException;
-import vn.io.nghlong3004.apartment_management.exception.TokenRefreshException;
+import vn.io.nghlong3004.apartment_management.exception.ErrorState;
+import vn.io.nghlong3004.apartment_management.exception.ResourceException;
 import vn.io.nghlong3004.apartment_management.model.RefreshToken;
 import vn.io.nghlong3004.apartment_management.model.Role;
 import vn.io.nghlong3004.apartment_management.model.User;
@@ -49,10 +48,10 @@ public class UserServiceImpl implements UserService {
 	@Override
 	public Token login(LoginRequest loginRequest) {
 
-		validateAccount(loginRequest);
-
 		User user = userRepository.findByEmail(loginRequest.getEmail())
-				.orElseThrow(() -> new AccountResourcesException());
+				.orElseThrow(() -> new ResourceException(ErrorState.LOGIN_FALSE));
+
+		validateAccount(loginRequest.getPassword(), user.getPassword());
 
 		String accessToken = jwtTokenProvider.generateToken(user.getEmail(), user.getRole().name());
 
@@ -67,7 +66,7 @@ public class UserServiceImpl implements UserService {
 		RefreshToken refreshToken = getRefreshToken(requestRefreshToken);
 
 		User user = userRepository.findById(refreshToken.getUserId())
-				.orElseThrow(() -> new AccountResourcesException());
+				.orElseThrow(() -> new ResourceException(ErrorState.ERROR_REFRESH_TOKEN));
 
 		String accessToken = jwtTokenProvider.generateToken(user.getEmail(), user.getRole().name());
 
@@ -83,24 +82,22 @@ public class UserServiceImpl implements UserService {
 
 	private RefreshToken getRefreshToken(String requestRefreshToken) {
 		RefreshToken refreshToken = refreshTokenService.findByToken(requestRefreshToken)
-				.orElseThrow(() -> new TokenRefreshException());
+				.orElseThrow(() -> new ResourceException(ErrorState.ERROR_REFRESH_TOKEN));
 
 		refreshTokenService.verifyExpiration(refreshToken);
 
 		return refreshToken;
 	}
 
-	private void validateAccount(LoginRequest loginRequest) {
-		String passwordHash = userRepository.findPasswordByEmail(loginRequest.getEmail())
-				.orElseThrow(() -> new AccountResourcesException());
-		if (!passwordEncoder.matches(loginRequest.getPassword(), passwordHash)) {
-			throw new AccountResourcesException();
+	private void validateAccount(String rawPassword, String encodedPassword) {
+		if (!passwordEncoder.matches(rawPassword, encodedPassword)) {
+			throw new ResourceException(ErrorState.LOGIN_FALSE);
 		}
 	}
 
 	private void validateEmail(RegisterRequest registerRequest) {
 		if (userRepository.existsByEmail(registerRequest.getEmail()).orElse(false)) {
-			throw new EmailResourceException();
+			throw new ResourceException(ErrorState.EXISTS_EMAIL);
 		}
 	}
 

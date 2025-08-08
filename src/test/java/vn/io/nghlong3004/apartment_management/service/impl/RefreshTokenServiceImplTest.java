@@ -17,7 +17,7 @@ import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import vn.io.nghlong3004.apartment_management.exception.TokenRefreshException;
+import vn.io.nghlong3004.apartment_management.exception.ResourceException;
 import vn.io.nghlong3004.apartment_management.model.RefreshToken;
 import vn.io.nghlong3004.apartment_management.repository.RefreshTokenRepository;
 
@@ -118,7 +118,7 @@ class RefreshTokenServiceImplTest {
 					.expiryDate(Instant.now().minus(100, ChronoUnit.MILLIS)).build();
 			Mockito.doNothing().when(mockRefreshTokenRepository).deleteByUserId(userId);
 
-			Assertions.assertThrows(TokenRefreshException.class, () -> {
+			Assertions.assertThrows(ResourceException.class, () -> {
 				refreshTokenServiceImpl.verifyExpiration(expiredToken);
 			});
 

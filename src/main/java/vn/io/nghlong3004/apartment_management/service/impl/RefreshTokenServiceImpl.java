@@ -8,7 +8,8 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import lombok.RequiredArgsConstructor;
-import vn.io.nghlong3004.apartment_management.exception.TokenRefreshException;
+import vn.io.nghlong3004.apartment_management.exception.ErrorState;
+import vn.io.nghlong3004.apartment_management.exception.ResourceException;
 import vn.io.nghlong3004.apartment_management.model.RefreshToken;
 import vn.io.nghlong3004.apartment_management.repository.RefreshTokenRepository;
 import vn.io.nghlong3004.apartment_management.service.RefreshTokenService;
@@ -42,7 +43,7 @@ public class RefreshTokenServiceImpl implements RefreshTokenService {
 	public void verifyExpiration(RefreshToken token) {
 		if (token.getExpiryDate().isBefore(Instant.now())) {
 			refreshTokenRepository.deleteByUserId(token.getUserId());
-			throw new TokenRefreshException();
+			throw new ResourceException(ErrorState.REFRESH_TOKEN_EXPIRED);
 		}
 	}
 

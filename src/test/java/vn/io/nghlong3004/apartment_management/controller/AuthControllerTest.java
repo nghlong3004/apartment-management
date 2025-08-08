@@ -23,7 +23,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseCookie;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
@@ -34,10 +33,8 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import jakarta.servlet.http.Cookie;
-import vn.io.nghlong3004.apartment_management.constants.MessageConstants;
-import vn.io.nghlong3004.apartment_management.exception.AccountResourcesException;
+import vn.io.nghlong3004.apartment_management.exception.ErrorState;
 import vn.io.nghlong3004.apartment_management.exception.ResourceException;
-import vn.io.nghlong3004.apartment_management.exception.TokenRefreshException;
 import vn.io.nghlong3004.apartment_management.model.dto.LoginRequest;
 import vn.io.nghlong3004.apartment_management.model.dto.RegisterRequest;
 import vn.io.nghlong3004.apartment_management.model.dto.Token;
@@ -95,8 +92,7 @@ public class AuthControllerTest {
 
 		RegisterRequest validRegisterRequest = createSampleRegisterRequest();
 
-		doThrow(new ResourceException(HttpStatus.BAD_REQUEST, MessageConstants.EXISTS_EMAIL)).when(userService)
-				.register(any(RegisterRequest.class));
+		doThrow(new ResourceException(ErrorState.EXISTS_EMAIL)).when(userService).register(any(RegisterRequest.class));
 
 		mockMvc.perform(post("/api/v1/auth/register").contentType(MediaType.APPLICATION_JSON)
 				.content(objectMapper.writeValueAsString(validRegisterRequest))).andExpect(status().isBadRequest());
@@ -126,7 +122,7 @@ public class AuthControllerTest {
 	@DisplayName("Method: loginUser - Returns 400 BadRequest when login fails")
 	void loginUser_WhenCredentialsAreInvalid_ShouldReturnUnauthorized() throws Exception {
 		LoginRequest loginRequest = createSampleLoginRequest();
-		when(userService.login(any(LoginRequest.class))).thenThrow(new AccountResourcesException());
+		when(userService.login(any(LoginRequest.class))).thenThrow(new ResourceException(ErrorState.LOGIN_FALSE));
 
 		mockMvc.perform(post("/api/v1/auth/login").contentType(MediaType.APPLICATION_JSON)
 				.content(objectMapper.writeValueAsString(loginRequest))).andExpect(status().isBadRequest());
@@ -165,7 +161,7 @@ public class AuthControllerTest {
 	void refreshToken_WhenTokenIsInvalid_ShouldReturnUnauthorized() throws Exception {
 		String invalidRefreshToken = UUID.randomUUID().toString();
 		Cookie refreshTokenCookie = new Cookie(UUID.randomUUID().toString(), invalidRefreshToken);
-		when(userService.refresh(anyString())).thenThrow(new TokenRefreshException());
+		when(userService.refresh(anyString())).thenThrow(new ResourceException(ErrorState.ERROR_REFRESH_TOKEN));
 
 		mockMvc.perform(post("/api/v1/auth/refresh-token").cookie(refreshTokenCookie))
 				.andExpect(status().isBadRequest());
