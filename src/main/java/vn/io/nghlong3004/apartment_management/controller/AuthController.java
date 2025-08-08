@@ -3,7 +3,6 @@ package vn.io.nghlong3004.apartment_management.controller;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseCookie;
-import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.CookieValue;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -11,6 +10,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
+import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import vn.io.nghlong3004.apartment_management.model.dto.LoginRequest;
@@ -32,22 +32,27 @@ public class AuthController {
 		userService.register(registerRequest);
 	}
 
-	@PostMapping("/login")
-	public ResponseEntity<LoginResponse> loginUser(@Valid @RequestBody LoginRequest loginRequest) {
+	@PostMapping(path = "/login", consumes = "application/json")
+	public LoginResponse loginUser(@Valid @RequestBody LoginRequest loginRequest, HttpServletResponse response) {
 		Token token = userService.login(loginRequest);
-		return returnAccessTokenAndRefreshToken(token);
+		return returnAccessTokenAndRefreshToken(token, response);
 	}
 
-	@PostMapping("/refresh-token")
-	public ResponseEntity<LoginResponse> refreshToken(@CookieValue(name = "refresh_token") String requestRefreshToken) {
+	@PostMapping(path = "/refresh-token", consumes = "application/json")
+	public LoginResponse refreshToken(@CookieValue(name = "refresh_token") String requestRefreshToken,
+			HttpServletResponse response) {
 		Token token = userService.refresh(requestRefreshToken);
-		return returnAccessTokenAndRefreshToken(token);
+		return returnAccessTokenAndRefreshToken(token, response);
 	}
 
-	private ResponseEntity<LoginResponse> returnAccessTokenAndRefreshToken(Token token) {
+	private LoginResponse returnAccessTokenAndRefreshToken(Token token, HttpServletResponse response) {
 		LoginResponse loginResponse = LoginResponse.builder().accessToken(token.getAccessToken()).build();
+
 		ResponseCookie refreshTokenCookie = userService.getResponseCookieRefreshToken(token.getRefreshToken());
-		return ResponseEntity.ok().header(HttpHeaders.SET_COOKIE, refreshTokenCookie.toString()).body(loginResponse);
+
+		response.addHeader(HttpHeaders.SET_COOKIE, refreshTokenCookie.toString());
+
+		return loginResponse;
 	}
 
 }
