@@ -14,7 +14,8 @@ public enum ErrorState {
 	DATABASE_EXCEPTION(HttpStatus.CONFLICT, "Data conflicts or constraint violations."),
 	LOGIN_FALSE(HttpStatus.BAD_REQUEST, "Incorrect email or password."),
 	ERROR_REFRESH_TOKEN(HttpStatus.BAD_REQUEST, "Refresh Token expired or not available."),
-	ERROR_GENERATE_TOKEN(HttpStatus.BAD_REQUEST, "Token generation error.");
+	ERROR_GENERATE_TOKEN(HttpStatus.BAD_REQUEST, "Token generation error."),
+	ACCOUNT_INACTIVE(HttpStatus.BAD_REQUEST, "Account locked.");
 
 	private HttpStatus status;
 	private String message;

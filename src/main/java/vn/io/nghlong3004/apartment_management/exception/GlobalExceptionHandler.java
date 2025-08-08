@@ -8,50 +8,54 @@ import org.springframework.web.bind.MissingRequestCookieException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
+import lombok.extern.slf4j.Slf4j;
 import vn.io.nghlong3004.apartment_management.model.dto.ErrorResponse;
 
+@Slf4j
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
 	@ExceptionHandler(Exception.class)
 	public ResponseEntity<ErrorResponse> handleUnwantedException(Exception exception) {
-		exception.printStackTrace();
+		log.error("An unexpected error occurred: ", exception);
 
 		ErrorState errorState = ErrorState.UNWANTED_EXCEPTION;
-
 		return handleException(errorState.getStatus(), errorState.getMessage());
 	}
 
 	@ExceptionHandler(MissingRequestCookieException.class)
 	public ResponseEntity<ErrorResponse> handleMissingRequestCookieException(MissingRequestCookieException exception) {
+		log.warn("Missing required cookie '{}'. Message: {}", exception.getCookieName(), exception.getMessage());
 
 		ErrorState errorState = ErrorState.ERROR_REFRESH_TOKEN;
-
 		return handleException(errorState.getStatus(), errorState.getMessage());
 	}
 
 	@ExceptionHandler(DataIntegrityViolationException.class)
 	public ResponseEntity<ErrorResponse> handleDataIntegrityViolation(DataIntegrityViolationException exception) {
+		log.error("A database integrity violation occurred: ", exception);
 
 		ErrorState errorState = ErrorState.DATABASE_EXCEPTION;
-
 		return handleException(errorState.getStatus(), errorState.getMessage());
 	}
 
 	@ExceptionHandler(ResourceException.class)
 	public ResponseEntity<ErrorResponse> handleBaseException(ResourceException exception) {
+		log.warn("A resource exception was handled: Status={}, Message='{}'", exception.getErrorState().getStatus(),
+				exception.getMessage());
 
 		return handleException(exception.getErrorState().getStatus(), exception.getMessage());
 	}
 
 	@ExceptionHandler(MethodArgumentNotValidException.class)
 	public ResponseEntity<ErrorResponse> handleValidationException(MethodArgumentNotValidException exception) {
+		String validationErrors = generateMessage(exception);
+		log.warn("Validation failed for request: {}", validationErrors);
 
-		return handleException(HttpStatus.BAD_REQUEST, generateMessage(exception));
+		return handleException(HttpStatus.BAD_REQUEST, validationErrors);
 	}
 
 	private ResponseEntity<ErrorResponse> handleException(HttpStatus httpStatus, String message) {
-
 		return new ResponseEntity<>(ErrorResponse.builder().code(httpStatus.value()).message(message).build(),
 				httpStatus);
 	}
@@ -60,11 +64,12 @@ public class GlobalExceptionHandler {
 		StringBuilder message = new StringBuilder();
 		exception.getBindingResult().getAllErrors().forEach((error) -> {
 			String errorMessage = error.getDefaultMessage();
-			message.append(errorMessage + ",");
+			message.append(errorMessage).append(", ");
 		});
 
-		message.deleteCharAt(message.length() - 1);
-		return new String(message);
+		if (message.length() > 0) {
+			message.setLength(message.length() - 2);
+		}
+		return message.toString();
 	}
-
 }
