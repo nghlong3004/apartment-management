@@ -10,6 +10,7 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Min;
 import lombok.RequiredArgsConstructor;
 import vn.io.nghlong3004.apartment_management.model.dto.UserDto;
 import vn.io.nghlong3004.apartment_management.service.UserService;
@@ -23,15 +24,13 @@ public class UserController {
 
 	@GetMapping("/{id}")
 	@ResponseStatus(code = HttpStatus.OK)
-	public UserDto getProfile(@PathVariable Long id) {
-		UserDto reponse = userService.getUser(id);
-
-		return reponse;
+	public UserDto getProfile(@Min(1) @PathVariable Long id) {
+		return userService.getUser(id);
 	}
 
 	@PutMapping("/{id}")
 	@ResponseStatus(code = HttpStatus.OK)
-	public void updateProfile(@PathVariable Long id, @Valid @RequestBody UserDto userDto) {
+	public void updateProfile(@Min(1) @PathVariable Long id, @Valid @RequestBody UserDto userDto) {
 		userService.updateUser(id, userDto);
 	}
 

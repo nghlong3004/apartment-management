@@ -36,7 +36,7 @@ public class JWTAuthenticationFilter extends OncePerRequestFilter {
 			filterChain.doFilter(request, response);
 			return;
 		}
-		log.trace("Incoming request path: {}", path);
+		log.info("Incoming request path: {}", path);
 
 		String authHeader = request.getHeader("Authorization");
 		if (authHeader == null || !authHeader.startsWith("Bearer ")) {
@@ -45,11 +45,11 @@ public class JWTAuthenticationFilter extends OncePerRequestFilter {
 			return;
 		}
 		String token = authHeader.substring(7);
-		log.trace("Extracted JWT token: {}", token);
+		log.info("Extracted JWT token: {}", token);
 
 		if (jwtService.isValid(token)) {
 			Long userId = jwtService.getUserId(token);
-			log.debug("JWT validated successfully for userId={}", userId);
+			log.info("JWT validated successfully for userId={}", userId);
 
 			UserDetails user = userDetailsService.loadUserByUsername(String.valueOf(userId));
 			Collection<? extends GrantedAuthority> authorities = jwtService.getAuthorities(token);

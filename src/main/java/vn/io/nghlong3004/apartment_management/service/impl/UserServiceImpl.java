@@ -1,8 +1,5 @@
 package vn.io.nghlong3004.apartment_management.service.impl;
 
-import java.sql.Timestamp;
-import java.time.LocalDateTime;
-
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseCookie;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -105,40 +102,45 @@ public class UserServiceImpl implements UserService {
 
 	@Override
 	public void updateUser(Long id, UserDto userDto) {
-		Long actorId = SecurityUtil.getCurrentUserId()
-				.orElseThrow(() -> new ResourceException(ErrorState.UNWANTED_EXCEPTION));
 
-		boolean isAdmin = SecurityUtil.hasRole("ADMIN");
-		if (!isAdmin && !actorId.equals(id)) {
-			throw new ResourceException(ErrorState.FORBIDDEN);
-		}
+		validateAuthorize(id);
 
-		log.info("UpdateUser requested: actorId={}, targetId={}", actorId, id);
+		log.info("Start update user by id: {}", id);
 
+		User user = getUserUpdate(id, userDto);
+
+		userRepository.update(user);
+	}
+
+	private User getUserUpdate(Long id, UserDto userDto) {
 		User user = userRepository.findById(id).orElseThrow(() -> new ResourceException(ErrorState.NOT_FOUND));
 
 		if (userDto.getEmail() != null) {
 			String newEmail = userDto.getEmail().trim().toLowerCase();
 			if (!newEmail.equalsIgnoreCase(user.getEmail())) {
-
 				userRepository.existsByEmail(newEmail)
 						.orElseThrow(() -> new ResourceException(ErrorState.EXISTS_EMAIL));
 				user.setEmail(newEmail);
-				log.debug("Email change: {} -> {}", user.getEmail(), newEmail);
+				log.info("Email change: {} -> {}", user.getEmail(), newEmail);
 			}
 		}
 		if (userDto.getFirstName() != null)
 			user.setFirstName(userDto.getFirstName());
 		if (userDto.getLastName() != null)
 			user.setLastName(userDto.getLastName());
-		if (userDto.getEmail() != null)
-			user.setEmail(userDto.getEmail());
 		if (userDto.getPhoneNumber() != null)
 			user.setPhoneNumber(userDto.getPhoneNumber());
+		return user;
+	}
 
-		user.setUpdated(Timestamp.valueOf(LocalDateTime.now()));
+	private void validateAuthorize(Long id) {
+		Long actorId = SecurityUtil.getCurrentUserId()
+				.orElseThrow(() -> new ResourceException(ErrorState.UNWANTED_EXCEPTION));
 
-		userRepository.update(user);
+		if (!SecurityUtil.hasRole("ADMIN") && !actorId.equals(id)) {
+			throw new ResourceException(ErrorState.UPDATE_USER_FORBIDDEN);
+		}
+
 	}
 
 	@Override

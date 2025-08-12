@@ -7,6 +7,7 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.MissingRequestCookieException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import lombok.extern.slf4j.Slf4j;
@@ -40,11 +41,17 @@ public class GlobalExceptionHandler {
 		return handleException(errorState.getStatus(), errorState.getMessage());
 	}
 
+	@ExceptionHandler(MethodArgumentTypeMismatchException.class)
+	public ResponseEntity<ErrorResponse> handleMethodArgumentTypeMismatchException(ResourceException exception) {
+		log.warn("Calling an API that doesn't exist");
+
+		ErrorState errorState = ErrorState.API_DOES_NOT_EXISTS;
+
+		return handleException(errorState.getStatus(), errorState.getMessage());
+	}
+
 	@ExceptionHandler(ResourceException.class)
 	public ResponseEntity<ErrorResponse> handleBaseException(ResourceException exception) {
-		log.warn("A resource exception was handled: Status={}, Message='{}'", exception.getErrorState().getStatus(),
-				exception.getMessage());
-
 		return handleException(exception.getErrorState().getStatus(), exception.getMessage());
 	}
 

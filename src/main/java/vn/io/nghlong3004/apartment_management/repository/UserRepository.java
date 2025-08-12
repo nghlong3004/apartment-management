@@ -20,13 +20,13 @@ public interface UserRepository {
 	public Optional<Boolean> existsByEmail(String email);
 
 	@Insert("""
-			INSERT INTO floor_user(first_name, last_name, email, password_hash, phone_number, role, status)
+			INSERT INTO floor_user(first_name, last_name, email, password, phone_number, role, status)
 			VALUES(#{firstName}, #{lastName}, #{email}, #{password}, #{phoneNumber}, #{role}::user_role, #{status}::user_status)
 			""")
 	public void save(User user);
 
 	@Select("""
-			SELECT id, first_name AS firstName, last_name AS lastName, email, password_hash AS password, phone_number AS phoneNumber,
+			SELECT id, first_name AS firstName, last_name AS lastName, email, password, phone_number AS phoneNumber,
 			role, status, floor_id, created, updated
 			FROM floor_user
 			WHERE email = #{email}
@@ -34,13 +34,13 @@ public interface UserRepository {
 	public Optional<User> findByEmail(String email);
 
 	@Select("""
-			SELECT password_hash AS password FROM floor_user
+			SELECT password FROM floor_user
 			WHERE email = #{email}
 			""")
 	public Optional<String> findPasswordByEmail(String email);
 
 	@Select("""
-			SELECT id, first_name AS firstName, last_name AS lastName, email, password_hash AS password, phone_number AS phoneNumber,
+			SELECT id, first_name AS firstName, last_name AS lastName, email, password, phone_number AS phoneNumber,
 			role, status, floor_id, created, updated
 			FROM floor_user
 			WHERE id = #{userId}
