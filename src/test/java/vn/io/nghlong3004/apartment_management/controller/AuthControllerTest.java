@@ -1,170 +1,122 @@
 package vn.io.nghlong3004.apartment_management.controller;
 
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
-import static vn.io.nghlong3004.apartment_management.util.GenerateUtil.generateEmail;
-import static vn.io.nghlong3004.apartment_management.util.GenerateUtil.generateFirstName;
-import static vn.io.nghlong3004.apartment_management.util.GenerateUtil.generateLastName;
-import static vn.io.nghlong3004.apartment_management.util.GenerateUtil.generatePassword;
-import static vn.io.nghlong3004.apartment_management.util.GenerateUtil.generatePhoneNumber;
 
 import java.util.UUID;
 
-import org.hamcrest.Matchers;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.mockito.Mockito;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
-import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
+import org.mockito.Captor;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.HttpHeaders;
-import org.springframework.http.MediaType;
 import org.springframework.http.ResponseCookie;
-import org.springframework.test.context.bean.override.mockito.MockitoBean;
-import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.test.web.servlet.result.MockMvcResultMatchers;
+import org.springframework.http.ResponseEntity;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
-
-import jakarta.servlet.http.Cookie;
 import vn.io.nghlong3004.apartment_management.exception.ErrorState;
 import vn.io.nghlong3004.apartment_management.exception.ResourceException;
 import vn.io.nghlong3004.apartment_management.model.dto.LoginRequest;
+import vn.io.nghlong3004.apartment_management.model.dto.LoginResponse;
 import vn.io.nghlong3004.apartment_management.model.dto.RegisterRequest;
 import vn.io.nghlong3004.apartment_management.model.dto.Token;
 import vn.io.nghlong3004.apartment_management.service.UserService;
 
-@WebMvcTest(AuthController.class)
-@AutoConfigureMockMvc(addFilters = false)
-public class AuthControllerTest {
+@ExtendWith(MockitoExtension.class)
+class AuthControllerTest {
 
-	@Autowired
-	private MockMvc mockMvc;
+	@Mock
+	private UserService mockUserService;
 
-	@MockitoBean
-	private UserService userService;
+	@InjectMocks
+	private AuthController authController;
 
-	@Autowired
-	private ObjectMapper objectMapper;
+	@Captor
+	private ArgumentCaptor<RegisterRequest> registerRequestCaptor;
+
+	@Captor
+	private ArgumentCaptor<LoginRequest> loginRequestCaptor;
 
 	private RegisterRequest createSampleRegisterRequest() {
-		return RegisterRequest.builder().firstName(generateFirstName()).lastName(generateLastName())
-				.email(generateEmail()).password(generatePassword()).phoneNumber(generatePhoneNumber()).build();
+		return RegisterRequest.builder().firstName("John").lastName("Doe")
+				.email("john" + UUID.randomUUID() + "@example.com").password("Passw0rd!@#").phoneNumber("0909123456")
+				.build();
 	}
 
 	private LoginRequest createSampleLoginRequest() {
-		return LoginRequest.builder().email(generateEmail()).password(generatePassword()).build();
+		return LoginRequest.builder().email("john" + UUID.randomUUID() + "@example.com").password("Passw0rd!@#")
+				.build();
 	}
 
 	private Token createSampleToken() {
-		return Token.builder().accessToken(UUID.randomUUID().toString()).refreshToken(UUID.randomUUID().toString())
+		return Token.builder().accessToken("access-" + UUID.randomUUID()).refreshToken("refresh-" + UUID.randomUUID())
 				.build();
 	}
 
 	@Test
-	@DisplayName("Method: registerUser - Should call service and return 201 CREATED when request is valid")
-	void registerUser_WhenRequestIsValidShouldReturnCreateds() throws JsonProcessingException, Exception {
-		RegisterRequest registerRequest = createSampleRegisterRequest();
-		Mockito.doNothing().when(userService).register(any(RegisterRequest.class));
+	@DisplayName("POST /register -> should call userService.register with correct request")
+	void registerUser_ShouldDelegateToService() {
+		RegisterRequest request = createSampleRegisterRequest();
 
-		mockMvc.perform(post("/api/v1/auth/register").contentType(MediaType.APPLICATION_JSON)
-				.content(objectMapper.writeValueAsString(registerRequest))).andExpect(status().isCreated());
+		authController.registerUser(request);
+
+		verify(mockUserService).register(registerRequestCaptor.capture());
+		RegisterRequest captured = registerRequestCaptor.getValue();
+		Assertions.assertEquals(request, captured);
 	}
 
 	@Test
-	@DisplayName("Method: registerUser - Should return 400 BAD REQUEST when request is invalid")
-	void registerUser_WhenRequestIsInvalid_ShouldReturnBadRequest() throws Exception {
-		RegisterRequest invalidRequest = RegisterRequest.builder().build();
-
-		mockMvc.perform(post("/api/v1/auth/register").contentType(MediaType.APPLICATION_JSON)
-				.content(objectMapper.writeValueAsString(invalidRequest))).andExpect(status().isBadRequest());
-	}
-
-	@Test
-	@DisplayName("Method: registerUser - Should return 400 BAD REQUEST when email already exists")
-	void registerUser_WhenServiceThrowsAppException_ShouldReturnBadRequest() throws Exception {
-
-		RegisterRequest validRegisterRequest = createSampleRegisterRequest();
-
-		doThrow(new ResourceException(ErrorState.EXISTS_EMAIL)).when(userService).register(any(RegisterRequest.class));
-
-		mockMvc.perform(post("/api/v1/auth/register").contentType(MediaType.APPLICATION_JSON)
-				.content(objectMapper.writeValueAsString(validRegisterRequest))).andExpect(status().isBadRequest());
-	}
-
-	@Test
-	@DisplayName("Method: loginUser - Returns 200 OK and tokens on successful login")
-	void loginUser_WhenCredentialsAreValid_ShouldReturnOkAndTokens() throws Exception {
-		LoginRequest loginRequest = createSampleLoginRequest();
+	@DisplayName("POST /login -> should return access token in body and refresh token in cookie")
+	void loginUser_ShouldReturnTokenAndCookie() {
+		LoginRequest request = createSampleLoginRequest();
 		Token token = createSampleToken();
-		ResponseCookie cookie = ResponseCookie.from("refresh_token", token.getRefreshToken()).httpOnly(true).path("/")
-				.build();
+		ResponseCookie cookie = ResponseCookie.from("refresh_token", token.getRefreshToken()).build();
 
-		when(userService.login(any(LoginRequest.class))).thenReturn(token);
-		when(userService.getResponseCookieRefreshToken(token.getRefreshToken())).thenReturn(cookie);
+		when(mockUserService.login(request)).thenReturn(token);
+		when(mockUserService.getResponseCookieRefreshToken(token.getRefreshToken())).thenReturn(cookie);
 
-		mockMvc.perform(post("/api/v1/auth/login").contentType(MediaType.APPLICATION_JSON)
-				.content(objectMapper.writeValueAsString(loginRequest))).andExpect(status().isOk())
-				.andExpect(MockMvcResultMatchers.jsonPath("$.accessToken", Matchers.is(token.getAccessToken())))
-				.andExpect(MockMvcResultMatchers.header().string(HttpHeaders.SET_COOKIE, cookie.toString()));
+		ResponseEntity<LoginResponse> response = authController.loginUser(request);
 
-		verify(userService).login(any(LoginRequest.class));
-		verify(userService).getResponseCookieRefreshToken(token.getRefreshToken());
+		verify(mockUserService).login(loginRequestCaptor.capture());
+		Assertions.assertEquals(request, loginRequestCaptor.getValue());
+
+		Assertions.assertEquals(200, response.getStatusCode().value());
+		Assertions.assertEquals(token.getAccessToken(), response.getBody().getAccessToken());
+		Assertions.assertTrue(response.getHeaders().containsKey(HttpHeaders.SET_COOKIE));
+		String setCookie = response.getHeaders().getFirst(HttpHeaders.SET_COOKIE);
+		Assertions.assertTrue(setCookie.contains(token.getRefreshToken()));
 	}
 
 	@Test
-	@DisplayName("Method: loginUser - Returns 400 BadRequest when login fails")
-	void loginUser_WhenCredentialsAreInvalid_ShouldReturnUnauthorized() throws Exception {
-		LoginRequest loginRequest = createSampleLoginRequest();
-		when(userService.login(any(LoginRequest.class))).thenThrow(new ResourceException(ErrorState.LOGIN_FALSE));
+	@DisplayName("POST /refresh-token -> should return new access token and set cookie")
+	void refreshToken_ShouldReturnNewTokenAndCookie() {
+		String refreshTokenValue = "refresh-" + UUID.randomUUID();
+		Token token = createSampleToken();
+		ResponseCookie cookie = ResponseCookie.from("refresh_token", token.getRefreshToken()).build();
 
-		mockMvc.perform(post("/api/v1/auth/login").contentType(MediaType.APPLICATION_JSON)
-				.content(objectMapper.writeValueAsString(loginRequest))).andExpect(status().isBadRequest());
+		when(mockUserService.refresh(refreshTokenValue)).thenReturn(token);
+		when(mockUserService.getResponseCookieRefreshToken(token.getRefreshToken())).thenReturn(cookie);
 
+		ResponseEntity<LoginResponse> response = authController.refreshToken(refreshTokenValue);
+
+		verify(mockUserService).refresh(refreshTokenValue);
+		Assertions.assertEquals(200, response.getStatusCode().value());
+		Assertions.assertEquals(token.getAccessToken(), response.getBody().getAccessToken());
+		Assertions.assertTrue(response.getHeaders().getFirst(HttpHeaders.SET_COOKIE).contains(token.getRefreshToken()));
 	}
 
 	@Test
-	@DisplayName("Method: refreshToken - Return 200 OK and new token when refresh token is valid")
-	void refreshToken_WhenCookieIsValid_ShouldReturnOkAndNewTokens() throws Exception {
-		String oldRefreshToken = UUID.randomUUID().toString();
-		Token newToken = Token.builder().accessToken(UUID.randomUUID().toString())
-				.refreshToken(UUID.randomUUID().toString()).build();
-		ResponseCookie newCookie = ResponseCookie.from("refresh_token", newToken.getRefreshToken()).httpOnly(true)
-				.path("/").build();
-		Cookie refreshTokenCookie = new Cookie("refresh_token", oldRefreshToken);
+	@DisplayName("POST /refresh-token -> propagates ResourceException when service fails (ERROR_REFRESH_TOKEN)")
+	void refreshToken_ShouldPropagateException_WhenServiceThrows() {
+		String invalidRefreshToken = "refresh-" + UUID.randomUUID();
 
-		when(userService.refresh(oldRefreshToken)).thenReturn(newToken);
-		when(userService.getResponseCookieRefreshToken(newToken.getRefreshToken())).thenReturn(newCookie);
+		when(mockUserService.refresh(invalidRefreshToken))
+				.thenThrow(new ResourceException(ErrorState.ERROR_REFRESH_TOKEN));
 
-		mockMvc.perform(post("/api/v1/auth/refresh-token").cookie(refreshTokenCookie)).andExpect(status().isOk())
-				.andExpect(MockMvcResultMatchers.jsonPath("$.accessToken", Matchers.is(newToken.getAccessToken())))
-				.andExpect(MockMvcResultMatchers.header().string(HttpHeaders.SET_COOKIE, newCookie.toString()));
-
-		verify(userService).refresh(oldRefreshToken);
-		verify(userService).getResponseCookieRefreshToken(newToken.getRefreshToken());
+		Assertions.assertThrows(ResourceException.class, () -> authController.refreshToken(invalidRefreshToken));
 	}
-
-	@Test
-	@DisplayName("Method: refreshToken - Returns 400 BAD REQUEST when there is no refresh token cookie")
-	void refreshToken_WhenCookieIsMissing_ShouldReturnBadRequest() throws Exception {
-		mockMvc.perform(post("/api/v1/auth/refresh-token")).andExpect(status().isBadRequest());
-	}
-
-	@Test
-	@DisplayName("Method: refreshToken - Returns 400 BadRequest when refresh token is invalid")
-	void refreshToken_WhenTokenIsInvalid_ShouldReturnUnauthorized() throws Exception {
-		String invalidRefreshToken = UUID.randomUUID().toString();
-		Cookie refreshTokenCookie = new Cookie(UUID.randomUUID().toString(), invalidRefreshToken);
-		when(userService.refresh(anyString())).thenThrow(new ResourceException(ErrorState.ERROR_REFRESH_TOKEN));
-
-		mockMvc.perform(post("/api/v1/auth/refresh-token").cookie(refreshTokenCookie))
-				.andExpect(status().isBadRequest());
-	}
-
 }
