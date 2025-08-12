@@ -5,6 +5,7 @@ import java.util.Optional;
 import org.apache.ibatis.annotations.Insert;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Select;
+import org.apache.ibatis.annotations.Update;
 
 import vn.io.nghlong3004.apartment_management.model.User;
 
@@ -12,7 +13,9 @@ import vn.io.nghlong3004.apartment_management.model.User;
 public interface UserRepository {
 
 	@Select("""
-			SELECT 1 FROM floor_user WHERE email = #{email}
+			SELECT 1
+			FROM floor_user
+			WHERE email = #{email}
 			""")
 	public Optional<Boolean> existsByEmail(String email);
 
@@ -24,19 +27,36 @@ public interface UserRepository {
 
 	@Select("""
 			SELECT id, first_name AS firstName, last_name AS lastName, email, password_hash AS password, phone_number AS phoneNumber,
-			role, status, floor_id, created, updated FROM floor_user WHERE email = #{email}
+			role, status, floor_id, created, updated
+			FROM floor_user
+			WHERE email = #{email}
 			""")
 	public Optional<User> findByEmail(String email);
 
 	@Select("""
-			SELECT password_hash AS password FROM floor_user WHERE email = #{email}
+			SELECT password_hash AS password FROM floor_user
+			WHERE email = #{email}
 			""")
 	public Optional<String> findPasswordByEmail(String email);
 
 	@Select("""
 			SELECT id, first_name AS firstName, last_name AS lastName, email, password_hash AS password, phone_number AS phoneNumber,
-			role, status, floor_id, created, updated FROM floor_user WHERE id = #{userId}
+			role, status, floor_id, created, updated
+			FROM floor_user
+			WHERE id = #{userId}
 			""")
 	public Optional<User> findById(Long userId);
+
+	@Update("""
+			UPDATE floor_user
+			SET
+				first_name = #{firstName},
+				last_name = #{lastName},
+				email = #{email},
+				phone_number = #{phoneNumber},
+				updated = NOW()
+			WHERE id = #{id}
+			""")
+	public void update(User user);
 
 }

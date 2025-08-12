@@ -15,7 +15,8 @@ public enum ErrorState {
 	LOGIN_FALSE(HttpStatus.BAD_REQUEST, "Incorrect email or password."),
 	ERROR_REFRESH_TOKEN(HttpStatus.BAD_REQUEST, "Refresh Token expired or not available."),
 	ERROR_GENERATE_TOKEN(HttpStatus.BAD_REQUEST, "Token generation error."),
-	ACCOUNT_INACTIVE(HttpStatus.BAD_REQUEST, "Account locked.");
+	ACCOUNT_INACTIVE(HttpStatus.BAD_REQUEST, "Account locked."), FORBIDDEN(HttpStatus.FORBIDDEN, "Incompetent."),
+	NOT_FOUND(HttpStatus.NOT_FOUND, "Not Found.");
 
 	private HttpStatus status;
 	private String message;

@@ -11,4 +11,8 @@ public class LoginResponse {
 	@NonNull
 	private String accessToken;
 
+	private Long id;
+	private String firstName;
+	private String lastName;
+
 }

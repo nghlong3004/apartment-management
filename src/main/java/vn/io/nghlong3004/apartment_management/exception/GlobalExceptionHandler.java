@@ -7,6 +7,7 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.MissingRequestCookieException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import lombok.extern.slf4j.Slf4j;
 import vn.io.nghlong3004.apartment_management.model.dto.ErrorResponse;
@@ -45,6 +46,14 @@ public class GlobalExceptionHandler {
 				exception.getMessage());
 
 		return handleException(exception.getErrorState().getStatus(), exception.getMessage());
+	}
+
+	@ExceptionHandler(NoResourceFoundException.class)
+	public ResponseEntity<ErrorResponse> handleNoResourceFoundException(NoResourceFoundException exception) {
+		log.warn("A resource exception was handled: Status={}, Message='{}'", exception.getStatusCode(),
+				exception.getMessage());
+
+		return handleException(HttpStatus.NOT_FOUND, exception.getMessage());
 	}
 
 	@ExceptionHandler(MethodArgumentNotValidException.class)

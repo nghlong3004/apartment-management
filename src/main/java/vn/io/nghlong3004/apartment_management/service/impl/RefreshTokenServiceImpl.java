@@ -21,7 +21,7 @@ import vn.io.nghlong3004.apartment_management.service.RefreshTokenService;
 public class RefreshTokenServiceImpl implements RefreshTokenService {
 
 	@Value("${jwt.refresh-token-expiration-ms}")
-	private String REFRESH_TOKEN_EXPIRATION_MS;
+	private long refreshTokenExpirationMs;
 
 	private final RefreshTokenRepository refreshTokenRepository;
 
@@ -45,7 +45,7 @@ public class RefreshTokenServiceImpl implements RefreshTokenService {
 		refreshTokenRepository.deleteByUserId(userId);
 
 		RefreshToken refreshToken = RefreshToken.builder().userId(userId).token(UUID.randomUUID().toString())
-				.expiryDate(Instant.now().plusMillis(Long.parseLong(REFRESH_TOKEN_EXPIRATION_MS))).build();
+				.expiryDate(Instant.now().plusMillis(refreshTokenExpirationMs)).build();
 
 		log.debug("Saving new refresh token to the database for user ID: {}", userId);
 		refreshTokenRepository.save(userId, refreshToken.getToken(), refreshToken.getExpiryDate());
