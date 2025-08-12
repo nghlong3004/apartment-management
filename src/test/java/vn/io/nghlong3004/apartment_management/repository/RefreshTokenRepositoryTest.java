@@ -24,7 +24,7 @@ import vn.io.nghlong3004.apartment_management.model.RefreshToken;
 public class RefreshTokenRepositoryTest {
 
 	@Value("${jwt.refresh-token-expiration-ms}")
-	private String REFRESH_TOKEN_EXPIRATION_MS;
+	private long refreshTokenExpirationMs;
 
 	@Autowired
 	private RefreshTokenRepository refreshTokenRepository;
@@ -40,8 +40,7 @@ public class RefreshTokenRepositoryTest {
 		String token = UUID.randomUUID().toString();
 
 		RefreshToken refreshToken = RefreshToken.builder().userId(userId).token(token)
-				.expiryDate(Instant.now(Clock.systemUTC()).plusMillis(Long.parseLong(REFRESH_TOKEN_EXPIRATION_MS)))
-				.build();
+				.expiryDate(Instant.now(Clock.systemUTC()).plusMillis(refreshTokenExpirationMs)).build();
 
 		return refreshToken;
 	}
@@ -75,7 +74,7 @@ public class RefreshTokenRepositoryTest {
 	}
 
 	@Test
-	@DisplayName("Method: DeleteByUserId")
+	@DisplayName("Method: DeleteByUserId -> Null")
 	void deleteByUserId_ShouldDeleteRefreshTokenByUserId() {
 		for (int i = 0; i < maxTestCaseAll; ++i) {
 			RefreshToken oldRefreshToken = createRefreshToken();
@@ -89,6 +88,103 @@ public class RefreshTokenRepositoryTest {
 					.orElse(null);
 			Assertions.assertThat(deletedRefreshToken).isNull();
 
+		}
+	}
+
+	@Test
+	@DisplayName("Method: save/find -> multiple tokens for same user, deleteByUserId removes all")
+	void saveMultipleTokensSameUser_thenDeleteAllByUserId() {
+		for (int i = 0; i < maxTestCaseAll; ++i) {
+			Long userId = Math.abs(new Random().nextLong());
+			Instant exp1 = Instant.now(Clock.systemUTC()).plusSeconds(600);
+			Instant exp2 = Instant.now(Clock.systemUTC()).plusSeconds(1200);
+
+			String t1 = UUID.randomUUID().toString();
+			String t2 = UUID.randomUUID().toString();
+
+			refreshTokenRepository.save(userId, t1, exp1);
+			refreshTokenRepository.save(userId, t2, exp2);
+
+			Assertions.assertThat(refreshTokenRepository.findByToken(t1)).isPresent();
+			Assertions.assertThat(refreshTokenRepository.findByToken(t2)).isPresent();
+
+			refreshTokenRepository.deleteByUserId(userId);
+
+			Assertions.assertThat(refreshTokenRepository.findByToken(t1)).isEmpty();
+			Assertions.assertThat(refreshTokenRepository.findByToken(t2)).isEmpty();
+		}
+	}
+
+	@Test
+	@DisplayName("Method: deleteByUserId -> must not affect other user is token")
+	void deleteByUserId_ShouldNotAffectOtherUsers() {
+		for (int i = 0; i < maxTestCaseAll; ++i) {
+			Long userA = Math.abs(new Random().nextLong());
+			Long userB = Math.abs(new Random().nextLong());
+
+			String tA = UUID.randomUUID().toString();
+			String tB = UUID.randomUUID().toString();
+
+			Instant exp = Instant.now(Clock.systemUTC()).plusSeconds(600);
+			refreshTokenRepository.save(userA, tA, exp);
+			refreshTokenRepository.save(userB, tB, exp);
+
+			refreshTokenRepository.deleteByUserId(userA);
+
+			Assertions.assertThat(refreshTokenRepository.findByToken(tA)).isEmpty();
+			Assertions.assertThat(refreshTokenRepository.findByToken(tB)).isPresent();
+		}
+	}
+
+	@Test
+	@DisplayName("Method: save/find -> allow past expiryDate (repo stores verbatim)")
+	void saveWithPastExpiry_ShouldBeReadable() {
+		for (int i = 0; i < maxTestCaseAll; ++i) {
+			Long userId = Math.abs(new Random().nextLong());
+			String token = UUID.randomUUID().toString();
+
+			Instant past = Instant.now(Clock.systemUTC()).minusSeconds(300);
+			refreshTokenRepository.save(userId, token, past);
+
+			RefreshToken found = refreshTokenRepository.findByToken(token).orElse(null);
+			Assertions.assertThat(found).isNotNull();
+			Assertions.assertThat(found.getExpiryDate()).isCloseTo(past, within(50, ChronoUnit.MILLIS));
+			Assertions.assertThat(found.getUserId()).isEqualTo(userId);
+			Assertions.assertThat(found.getToken()).isEqualTo(token);
+		}
+	}
+
+	@Test
+	@DisplayName("Method: findByToken -> exact match only")
+	void findByToken_ShouldReturnOnlyExactMatch() {
+		for (int i = 0; i < maxTestCaseAll; ++i) {
+			Long userId = Math.abs(new Random().nextLong());
+			String exact = UUID.randomUUID().toString();
+			String other = UUID.randomUUID().toString();
+
+			Instant exp = Instant.now(Clock.systemUTC()).plusSeconds(600);
+			refreshTokenRepository.save(userId, exact, exp);
+
+			Assertions.assertThat(refreshTokenRepository.findByToken(exact)).isPresent();
+			Assertions.assertThat(refreshTokenRepository.findByToken(other)).isEmpty();
+		}
+	}
+
+	@Test
+	@DisplayName("Method: deleteByUserId -> no-op when user does not exist")
+	void deleteByUserId_WhenUserNotExist_ShouldDoNothing() {
+		for (int i = 0; i < maxTestCaseAll; ++i) {
+			Long existingUser = Math.abs(new Random().nextLong());
+			Long nonExisting = Math.abs(new Random().nextLong());
+
+			String token = UUID.randomUUID().toString();
+			Instant exp = Instant.now(Clock.systemUTC()).plusSeconds(600);
+
+			refreshTokenRepository.save(existingUser, token, exp);
+
+			refreshTokenRepository.deleteByUserId(nonExisting);
+
+			Assertions.assertThat(refreshTokenRepository.findByToken(token)).isPresent();
 		}
 	}
 

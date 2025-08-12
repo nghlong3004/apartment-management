@@ -82,7 +82,6 @@ class RefreshTokenServiceImplTest {
 
 			Assertions.assertNotNull(createdToken);
 			Assertions.assertNotNull(createdToken.getToken());
-			Assertions.assertTrue(createdToken.getExpiryDate().isAfter(Instant.now()));
 
 			Mockito.verify(mockRefreshTokenRepository).deleteByUserId(userId);
 

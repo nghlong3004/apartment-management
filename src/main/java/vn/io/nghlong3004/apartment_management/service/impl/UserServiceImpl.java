@@ -16,10 +16,12 @@ import vn.io.nghlong3004.apartment_management.model.UserStatus;
 import vn.io.nghlong3004.apartment_management.model.dto.LoginRequest;
 import vn.io.nghlong3004.apartment_management.model.dto.RegisterRequest;
 import vn.io.nghlong3004.apartment_management.model.dto.Token;
+import vn.io.nghlong3004.apartment_management.model.dto.UserDto;
 import vn.io.nghlong3004.apartment_management.repository.UserRepository;
-import vn.io.nghlong3004.apartment_management.security.JWTTokenProvider;
+import vn.io.nghlong3004.apartment_management.service.JWTService;
 import vn.io.nghlong3004.apartment_management.service.RefreshTokenService;
 import vn.io.nghlong3004.apartment_management.service.UserService;
+import vn.io.nghlong3004.apartment_management.util.SecurityUtil;
 
 @Service
 @RequiredArgsConstructor
@@ -27,11 +29,11 @@ import vn.io.nghlong3004.apartment_management.service.UserService;
 public class UserServiceImpl implements UserService {
 
 	@Value("${jwt.refresh-token-expiration-ms}")
-	private String REFRESH_TOKEN_EXPIRATION_MS;
+	private long refreshTokenExpirationMs;
 
 	private final UserRepository userRepository;
 	private final PasswordEncoder passwordEncoder;
-	private final JWTTokenProvider jwtTokenProvider;
+	private final JWTService jwtTokenProvider;
 	private final RefreshTokenService refreshTokenService;
 
 	@Override
@@ -46,7 +48,7 @@ public class UserServiceImpl implements UserService {
 				.status(UserStatus.ACTIVE).floor(null).build();
 
 		userRepository.save(user);
-		log.info("User registration successful with email: {}. \n New User ID: {}", user.getEmail(), user.getId());
+		log.info("User registration successful with email: {}.", user.getEmail());
 	}
 
 	@Override
@@ -62,7 +64,7 @@ public class UserServiceImpl implements UserService {
 
 		validateAccount(loginRequest.getPassword(), user);
 
-		String accessToken = jwtTokenProvider.generateToken(user.getEmail(), user.getRole().name());
+		String accessToken = jwtTokenProvider.generateAccessToken(user.getId(), user.getRole());
 		log.debug("Successfully created access token for user ID: {}", user.getId());
 
 		RefreshToken refreshToken = refreshTokenService.createRefreshToken(user.getId());
@@ -84,7 +86,7 @@ public class UserServiceImpl implements UserService {
 			return new ResourceException(ErrorState.ERROR_REFRESH_TOKEN);
 		});
 
-		String accessToken = jwtTokenProvider.generateToken(user.getEmail(), user.getRole().name());
+		String accessToken = jwtTokenProvider.generateAccessToken(user.getId(), user.getRole());
 		log.info("Refresh access token successfully for user ID: {}", user.getId());
 
 		return Token.builder().accessToken(accessToken).refreshToken(refreshToken.getToken()).build();
@@ -94,15 +96,70 @@ public class UserServiceImpl implements UserService {
 	public ResponseCookie getResponseCookieRefreshToken(String refreshToken) {
 		log.debug("Create ResponseCookie for refresh token.");
 		ResponseCookie responseCookie = ResponseCookie.from("refresh_token", refreshToken).httpOnly(true).secure(true)
-				.path("/").maxAge(Long.parseLong(REFRESH_TOKEN_EXPIRATION_MS) / 1000).sameSite("Strict").build();
+				.path("/").maxAge(refreshTokenExpirationMs / 1000).sameSite("Strict").build();
 		return responseCookie;
 	}
 
+	@Override
+	public void updateUser(Long id, UserDto userDto) {
+
+		validateAuthorize(id);
+
+		log.info("Start update user by id: {}", id);
+
+		User user = getUserUpdate(id, userDto);
+
+		userRepository.update(user);
+	}
+
+	private User getUserUpdate(Long id, UserDto userDto) {
+		User user = userRepository.findById(id).orElseThrow(() -> new ResourceException(ErrorState.NOT_FOUND));
+
+		if (userDto.getEmail() != null) {
+			String newEmail = userDto.getEmail().trim().toLowerCase();
+			if (!newEmail.equalsIgnoreCase(user.getEmail())) {
+				userRepository.existsByEmail(newEmail)
+						.orElseThrow(() -> new ResourceException(ErrorState.EXISTS_EMAIL));
+				user.setEmail(newEmail);
+				log.info("Email change: {} -> {}", user.getEmail(), newEmail);
+			}
+		}
+		if (userDto.getFirstName() != null)
+			user.setFirstName(userDto.getFirstName());
+		if (userDto.getLastName() != null)
+			user.setLastName(userDto.getLastName());
+		if (userDto.getPhoneNumber() != null)
+			user.setPhoneNumber(userDto.getPhoneNumber());
+		return user;
+	}
+
+	private void validateAuthorize(Long id) {
+		Long actorId = SecurityUtil.getCurrentUserId()
+				.orElseThrow(() -> new ResourceException(ErrorState.UNWANTED_EXCEPTION));
+
+		if (!SecurityUtil.hasRole("ADMIN") && !actorId.equals(id)) {
+			throw new ResourceException(ErrorState.UPDATE_USER_FORBIDDEN);
+		}
+
+	}
+
+	@Override
+	public UserDto getUser(Long id) {
+		log.info("Start get User by id: {}.", id);
+
+		User user = userRepository.findById(id).orElseThrow(() -> new ResourceException(ErrorState.NOT_FOUND));
+
+		log.info("User with corresponding id exists: {}.", id);
+
+		return UserDto.builder().email(user.getEmail()).firstName(user.getFirstName()).lastName(user.getLastName())
+				.phoneNumber(user.getPhoneNumber()).build();
+	}
+
 	private RefreshToken getRefreshToken(String requestRefreshToken) {
-		log.debug("Looking for refresh token in database.");
+		log.info("Looking for refresh token in database.");
 		RefreshToken refreshToken = refreshTokenService.findByToken(requestRefreshToken).orElseThrow(() -> {
 			log.warn("Token refresh request failed: Refresh token does not exist in database.");
-			return new ResourceException(ErrorState.ERROR_REFRESH_TOKEN);
+			throw new ResourceException(ErrorState.ERROR_REFRESH_TOKEN);
 		});
 
 		log.debug("Refresh token found. Verifying expiration time..");
@@ -124,7 +181,7 @@ public class UserServiceImpl implements UserService {
 
 	private void validateEmail(RegisterRequest registerRequest) {
 		if (userRepository.existsByEmail(registerRequest.getEmail()).orElse(false)) {
-			log.warn("Đăng ký thất bại: Email {} đã tồn tại.", registerRequest.getEmail());
+			log.warn("Registration failed: Email {} already exists.", registerRequest.getEmail());
 			throw new ResourceException(ErrorState.EXISTS_EMAIL);
 		}
 	}
