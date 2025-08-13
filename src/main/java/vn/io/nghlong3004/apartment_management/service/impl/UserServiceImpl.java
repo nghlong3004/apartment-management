@@ -135,7 +135,7 @@ public class UserServiceImpl implements UserService {
 
 	private void validateAuthorize(Long id) {
 		Long actorId = SecurityUtil.getCurrentUserId()
-				.orElseThrow(() -> new ResourceException(ErrorState.UNWANTED_EXCEPTION));
+				.orElseThrow(() -> new ResourceException(ErrorState.ACCESS_TOKEN_IS_WRONG));
 
 		if (!SecurityUtil.hasRole("ADMIN") && !actorId.equals(id)) {
 			throw new ResourceException(ErrorState.UPDATE_USER_FORBIDDEN);

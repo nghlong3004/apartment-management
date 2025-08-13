@@ -3,6 +3,7 @@ package vn.io.nghlong3004.apartment_management.exception;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.HttpMediaTypeNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.MissingRequestCookieException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -41,8 +42,24 @@ public class GlobalExceptionHandler {
 		return handleException(errorState.getStatus(), errorState.getMessage());
 	}
 
+	@ExceptionHandler(HttpMediaTypeNotSupportedException.class)
+	public ResponseEntity<ErrorResponse> handleHttpMediaTypeNotSupportedException(
+			HttpMediaTypeNotSupportedException exception) {
+		String unsupported = exception.getContentType() != null ? exception.getContentType().toString() : "unknown";
+
+		String supported = exception.getSupportedMediaTypes().isEmpty() ? "none"
+				: exception.getSupportedMediaTypes().toString();
+
+		log.warn("Unsupported Content-Type: {}. Supported: {}", unsupported, supported);
+
+		ErrorState errorState = ErrorState.UNSUPPORTED_MEDIA_TYPE;
+
+		return handleException(errorState.getStatus(), errorState.getMessage());
+	}
+
 	@ExceptionHandler(MethodArgumentTypeMismatchException.class)
-	public ResponseEntity<ErrorResponse> handleMethodArgumentTypeMismatchException(ResourceException exception) {
+	public ResponseEntity<ErrorResponse> handleMethodArgumentTypeMismatchException(
+			MethodArgumentTypeMismatchException exception) {
 		log.warn("Calling an API that doesn't exist");
 
 		ErrorState errorState = ErrorState.API_DOES_NOT_EXISTS;
