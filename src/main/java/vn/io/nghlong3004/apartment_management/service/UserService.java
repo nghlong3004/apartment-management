@@ -9,16 +9,16 @@ import vn.io.nghlong3004.apartment_management.model.dto.UserDto;
 
 public interface UserService {
 
-	public void register(RegisterRequest registerRequest);
+	void register(RegisterRequest registerRequest);
 
-	public Token login(LoginRequest loginRequest);
+	Token login(LoginRequest loginRequest);
 
-	public Token refresh(String requestRefreshToken);
+	Token refresh(String requestRefreshToken);
 
-	public ResponseCookie getResponseCookieRefreshToken(String refreshToken);
+	ResponseCookie getResponseCookieRefreshToken(String refreshToken);
 
-	public void updateUser(Long id, UserDto userDto);
+	void updateUser(Long id, UserDto userDto);
 
-	public UserDto getUser(Long id);
+	UserDto getUser(Long id);
 
 }

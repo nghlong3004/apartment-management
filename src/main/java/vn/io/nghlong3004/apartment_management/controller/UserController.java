@@ -28,7 +28,7 @@ public class UserController {
 		return userService.getUser(id);
 	}
 
-	@PutMapping("/{id}")
+	@PutMapping(value = "/{id}", consumes = "application/json")
 	@ResponseStatus(code = HttpStatus.OK)
 	public void updateProfile(@Min(1) @PathVariable Long id, @Valid @RequestBody UserDto userDto) {
 		userService.updateUser(id, userDto);

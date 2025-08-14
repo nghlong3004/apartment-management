@@ -1,5 +1,6 @@
 package vn.io.nghlong3004.apartment_management.service.impl;
 
+import org.springframework.http.HttpStatus;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
@@ -7,7 +8,7 @@ import org.springframework.stereotype.Service;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import vn.io.nghlong3004.apartment_management.exception.ErrorState;
+import vn.io.nghlong3004.apartment_management.constant.ErrorMessage;
 import vn.io.nghlong3004.apartment_management.exception.ResourceException;
 import vn.io.nghlong3004.apartment_management.model.User;
 import vn.io.nghlong3004.apartment_management.model.UserPrincipal;
@@ -22,12 +23,14 @@ public class UserDetailsServiceImpl implements UserDetailsService {
 
 	@Override
 	public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
+		return null;
+	}
 
-		Long id = Long.valueOf(username);
-		log.debug("Loading user by id={}", id);
+	public UserDetails loadUserById(Long id) throws UsernameNotFoundException {
+		log.debug("Loading user by id = {}", id);
 
-		User user = userRepository.findById(id).orElseThrow(() -> new ResourceException(ErrorState.NOT_FOUND));
-
+		User user = userRepository.findById(id)
+				.orElseThrow(() -> new ResourceException(HttpStatus.NOT_FOUND, ErrorMessage.ID_NOT_FOUND));
 		return UserPrincipal.from(user);
 	}
 

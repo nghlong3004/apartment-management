@@ -9,15 +9,17 @@ import io.jsonwebtoken.Claims;
 
 public interface JWTService {
 
-	public String generateAccessToken(Long userId, Object roles);
+	String generateAccessToken(Long userId, Object roles);
 
-	public boolean isValid(String token);
+	boolean isValid(String token);
 
-	public Long getUserId(String token);
+	void validateOrThrow(String token);
 
-	public Collection<? extends GrantedAuthority> getAuthorities(String token);
+	Long getUserId(String token);
 
-	public Date getExpiration(String token);
+	Collection<? extends GrantedAuthority> getAuthorities(String token);
 
-	public Claims getClaims(String token);
+	Date getExpiration(String token);
+
+	Claims getClaims(String token);
 }

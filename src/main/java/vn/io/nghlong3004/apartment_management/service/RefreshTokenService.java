@@ -6,10 +6,10 @@ import vn.io.nghlong3004.apartment_management.model.RefreshToken;
 
 public interface RefreshTokenService {
 
-	public Optional<RefreshToken> findByToken(String token);
+	Optional<RefreshToken> findByToken(String token);
 
-	public RefreshToken createRefreshToken(Long userId);
+	RefreshToken createRefreshToken(Long userId);
 
-	public void verifyExpiration(RefreshToken token);
+	void verifyExpiration(RefreshToken token);
 
 }

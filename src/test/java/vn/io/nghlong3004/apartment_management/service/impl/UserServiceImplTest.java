@@ -32,7 +32,7 @@ import org.springframework.http.ResponseCookie;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.util.ReflectionTestUtils;
 
-import vn.io.nghlong3004.apartment_management.exception.ErrorState;
+import vn.io.nghlong3004.apartment_management.constant.ErrorMessage;
 import vn.io.nghlong3004.apartment_management.exception.ResourceException;
 import vn.io.nghlong3004.apartment_management.model.RefreshToken;
 import vn.io.nghlong3004.apartment_management.model.Role;
@@ -132,7 +132,7 @@ class UserServiceImplTest {
 				userServiceImpl.register(request);
 			});
 
-			Assertions.assertEquals(exception.getErrorState(), ErrorState.EXISTS_EMAIL);
+			Assertions.assertEquals(exception.getMessage(), ErrorMessage.EMAIL_ALREADY_EXISTS);
 		}
 	}
 
@@ -145,7 +145,7 @@ class UserServiceImplTest {
 
 			ResourceException resourceException = Assertions.assertThrows(ResourceException.class,
 					() -> userServiceImpl.login(loginRequest));
-			Assertions.assertEquals(ErrorState.LOGIN_FALSE, resourceException.getErrorState());
+			Assertions.assertEquals(ErrorMessage.INVALID_CREDENTIALS, resourceException.getMessage());
 		}
 	}
 
@@ -154,15 +154,15 @@ class UserServiceImplTest {
 	void login_WrongPassword_ShouldThrow() {
 		for (int i = 0; i < maxTestCase; ++i) {
 			LoginRequest loginRequest = createSampleLoginRequest();
-			User user = User.builder().id(42L).email(loginRequest.getEmail()).password("encoded") // stored hash
-					.role(Role.USER).status(UserStatus.ACTIVE).build();
+			User user = User.builder().id(42L).email(loginRequest.getEmail()).password("encoded").role(Role.USER)
+					.status(UserStatus.ACTIVE).build();
 
 			Mockito.when(mockUserRepository.findByEmail(loginRequest.getEmail())).thenReturn(Optional.of(user));
 			Mockito.when(mockPasswordEncoder.matches(loginRequest.getPassword(), user.getPassword())).thenReturn(false);
 
 			ResourceException resourceException = Assertions.assertThrows(ResourceException.class,
 					() -> userServiceImpl.login(loginRequest));
-			Assertions.assertEquals(ErrorState.LOGIN_FALSE, resourceException.getErrorState());
+			Assertions.assertEquals(ErrorMessage.INVALID_CREDENTIALS, resourceException.getMessage());
 		}
 	}
 
@@ -179,7 +179,7 @@ class UserServiceImplTest {
 
 			ResourceException resourceException = Assertions.assertThrows(ResourceException.class,
 					() -> userServiceImpl.login(loginRequest));
-			Assertions.assertEquals(ErrorState.ACCOUNT_INACTIVE, resourceException.getErrorState());
+			Assertions.assertEquals(ErrorMessage.ACCOUNT_INACTIVE, resourceException.getMessage());
 		}
 	}
 

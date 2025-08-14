@@ -3,14 +3,19 @@ package vn.io.nghlong3004.apartment_management.exception;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.web.HttpMediaTypeNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.MissingRequestCookieException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.HandlerMethodValidationException;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 
+import jakarta.validation.ConstraintViolationException;
 import lombok.extern.slf4j.Slf4j;
+import vn.io.nghlong3004.apartment_management.constant.ErrorMessage;
 import vn.io.nghlong3004.apartment_management.model.dto.ErrorResponse;
 
 @Slf4j
@@ -19,40 +24,52 @@ public class GlobalExceptionHandler {
 
 	@ExceptionHandler(Exception.class)
 	public ResponseEntity<ErrorResponse> handleUnwantedException(Exception exception) {
-		log.error("An unexpected error occurred: ", exception);
+		log.error("Unhandled exception: {}", exception);
 
-		ErrorState errorState = ErrorState.UNWANTED_EXCEPTION;
-		return handleException(errorState.getStatus(), errorState.getMessage());
+		return handleException(HttpStatus.INTERNAL_SERVER_ERROR, ErrorMessage.INTERNAL_SERVER_ERROR);
 	}
 
 	@ExceptionHandler(MissingRequestCookieException.class)
 	public ResponseEntity<ErrorResponse> handleMissingRequestCookieException(MissingRequestCookieException exception) {
 		log.warn("Missing required cookie '{}'. Message: {}", exception.getCookieName(), exception.getMessage());
 
-		ErrorState errorState = ErrorState.ERROR_REFRESH_TOKEN;
-		return handleException(errorState.getStatus(), errorState.getMessage());
+		return handleException(HttpStatus.BAD_REQUEST, "Missing required cookie '" + exception.getCookieName() + "'.");
+
 	}
 
 	@ExceptionHandler(DataIntegrityViolationException.class)
 	public ResponseEntity<ErrorResponse> handleDataIntegrityViolation(DataIntegrityViolationException exception) {
 		log.error("A database integrity violation occurred: ", exception);
 
-		ErrorState errorState = ErrorState.DATABASE_EXCEPTION;
-		return handleException(errorState.getStatus(), errorState.getMessage());
+		return handleException(HttpStatus.CONFLICT, ErrorMessage.DATA_CONFLICT);
+	}
+
+	@ExceptionHandler(HttpMediaTypeNotSupportedException.class)
+	public ResponseEntity<ErrorResponse> handleHttpMediaTypeNotSupportedException(
+			HttpMediaTypeNotSupportedException exception) {
+		String unsupported = exception.getContentType() != null ? exception.getContentType().toString() : "unknown";
+
+		String supported = exception.getSupportedMediaTypes().isEmpty() ? "none"
+				: exception.getSupportedMediaTypes().toString();
+
+		log.warn("Unsupported Content-Type: {}. Supported: {}", unsupported, supported);
+
+		return handleException(HttpStatus.UNSUPPORTED_MEDIA_TYPE, ErrorMessage.UNSUPPORTED_MEDIA_TYPE);
 	}
 
 	@ExceptionHandler(MethodArgumentTypeMismatchException.class)
-	public ResponseEntity<ErrorResponse> handleMethodArgumentTypeMismatchException(ResourceException exception) {
+	public ResponseEntity<ErrorResponse> handleMethodArgumentTypeMismatchException(
+			MethodArgumentTypeMismatchException exception) {
 		log.warn("Calling an API that doesn't exist");
 
-		ErrorState errorState = ErrorState.API_DOES_NOT_EXISTS;
-
-		return handleException(errorState.getStatus(), errorState.getMessage());
+		return handleException(HttpStatus.BAD_REQUEST, "Parameter '" + exception.getName() + "' has invalid type.");
 	}
 
 	@ExceptionHandler(ResourceException.class)
 	public ResponseEntity<ErrorResponse> handleBaseException(ResourceException exception) {
-		return handleException(exception.getErrorState().getStatus(), exception.getMessage());
+		log.warn("An error occurred: {}", exception.getMessage());
+
+		return handleException(exception.getStatus(), exception.getMessage());
 	}
 
 	@ExceptionHandler(NoResourceFoundException.class)
@@ -60,7 +77,31 @@ public class GlobalExceptionHandler {
 		log.warn("A resource exception was handled: Status={}, Message='{}'", exception.getStatusCode(),
 				exception.getMessage());
 
-		return handleException(HttpStatus.NOT_FOUND, exception.getMessage());
+		return handleException(HttpStatus.NOT_FOUND, ErrorMessage.ENDPOINT_NOT_FOUND);
+	}
+
+	@ExceptionHandler(HandlerMethodValidationException.class)
+	public ResponseEntity<ErrorResponse> handleHandlerMethodValidationException(
+			HandlerMethodValidationException exception) {
+		log.warn("Validation failed for request: {}", exception.getMessage());
+
+		return handleException(HttpStatus.BAD_REQUEST, ErrorMessage.ENDPOINT_NOT_FOUND);
+	}
+
+	@ExceptionHandler(HttpMessageNotReadableException.class)
+	public ResponseEntity<ErrorResponse> handleHandlerMethodValidationException(
+			HttpMessageNotReadableException exception) {
+		log.warn("Http message not readable exception: {}", exception.getMessage());
+
+		return handleException(HttpStatus.BAD_REQUEST, exception.getMessage());
+	}
+
+	@ExceptionHandler(ConstraintViolationException.class)
+	public ResponseEntity<ErrorResponse> handleHandlerMethodValidationException(
+			ConstraintViolationException exception) {
+		log.warn("Constraint Violation Exception: {}", exception.getMessage());
+
+		return handleException(HttpStatus.BAD_REQUEST, ErrorMessage.ENDPOINT_NOT_FOUND);
 	}
 
 	@ExceptionHandler(MethodArgumentNotValidException.class)

@@ -26,13 +26,13 @@ public class AuthController {
 
 	private final UserService userService;
 
-	@PostMapping("/register")
+	@PostMapping(value = "/register", consumes = "application/json")
 	@ResponseStatus(code = HttpStatus.CREATED)
 	public void registerUser(@Valid @RequestBody RegisterRequest registerRequest) {
 		userService.register(registerRequest);
 	}
 
-	@PostMapping("/login")
+	@PostMapping(value = "/login", consumes = "application/json")
 	public ResponseEntity<LoginResponse> loginUser(@Valid @RequestBody LoginRequest loginRequest) {
 		Token token = userService.login(loginRequest);
 		return returnAccessTokenAndRefreshToken(token);
