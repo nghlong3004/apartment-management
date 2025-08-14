@@ -1,7 +1,7 @@
 package vn.io.nghlong3004.apartment_management.service.impl;
 
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.mockStatic;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static vn.io.nghlong3004.apartment_management.util.GenerateUtil.generateEmail;
@@ -24,10 +24,9 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Captor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
-import org.mockito.MockedStatic;
 import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseCookie;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.util.ReflectionTestUtils;
@@ -45,22 +44,21 @@ import vn.io.nghlong3004.apartment_management.model.dto.UserDto;
 import vn.io.nghlong3004.apartment_management.repository.UserRepository;
 import vn.io.nghlong3004.apartment_management.service.JWTService;
 import vn.io.nghlong3004.apartment_management.service.RefreshTokenService;
-import vn.io.nghlong3004.apartment_management.util.SecurityUtil;
+import vn.io.nghlong3004.apartment_management.service.validator.UserServiceValidator;
 
 @ExtendWith(MockitoExtension.class)
 class UserServiceImplTest {
-
-	@Value("${jwt.refresh-token-expiration-ms}")
-	private long refreshTokenExpirationMs;
 
 	@Mock
 	private UserRepository mockUserRepository;
 	@Mock
 	private PasswordEncoder mockPasswordEncoder;
 	@Mock
-	private JWTService mockJwtTokenProvider;
+	private JWTService mockJwtService;
 	@Mock
 	private RefreshTokenService mockRefreshTokenService;
+	@Mock
+	private UserServiceValidator mockUserServiceValidator;
 
 	@InjectMocks
 	private UserServiceImpl userServiceImpl;
@@ -71,7 +69,6 @@ class UserServiceImplTest {
 	private final int maxTestCase = 15;
 
 	private RegisterRequest createSampleRegisterRequest() {
-
 		return RegisterRequest.builder().firstName(generateFirstName()).lastName(generateLastName())
 				.email(generateEmail()).password(generatePassword()).phoneNumber(generatePhoneNumber()).build();
 	}
@@ -80,14 +77,9 @@ class UserServiceImplTest {
 		return LoginRequest.builder().email(generateEmail()).password(generatePassword()).build();
 	}
 
-	private User createSampleUser() {
-		return User.builder().email(generateEmail()).password(generatePassword()).role(Role.USER)
-				.status(UserStatus.ACTIVE).build();
-	}
-
-	private RefreshToken createSampleRefreshToken(User user) {
-		return RefreshToken.builder().id(1L).userId(user.getId()).token(UUID.randomUUID().toString())
-				.expiryDate(Instant.now().plusMillis(refreshTokenExpirationMs)).build();
+	private RefreshToken createSampleRefreshToken(Long userId) {
+		return RefreshToken.builder().id(1L).userId(userId).token(UUID.randomUUID().toString())
+				.expiryDate(Instant.now().plusSeconds(3600)).build();
 	}
 
 	@BeforeEach
@@ -98,109 +90,117 @@ class UserServiceImplTest {
 	}
 
 	@Test
-	@DisplayName("Method: Register -> Save user successfully when email does not exist")
+	@DisplayName("Method: register -> should save user when email does not exist (via validator)")
 	void register_WhenEmailDoesNotExist_ShouldSaveUserSuccessfully() {
 		RegisterRequest registerRequest = createSampleRegisterRequest();
-		String password = UUID.randomUUID().toString();
-		Mockito.when(mockUserRepository.existsByEmail(registerRequest.getEmail())).thenReturn(Optional.of(false));
-		Mockito.when(mockPasswordEncoder.encode(registerRequest.getPassword())).thenReturn(password);
+		Mockito.doNothing().when(mockUserServiceValidator).ensureEmailNotExists(anyString());
+
+		String encoded = UUID.randomUUID().toString();
+		when(mockPasswordEncoder.encode(registerRequest.getPassword())).thenReturn(encoded);
 
 		userServiceImpl.register(registerRequest);
 
-		Mockito.verify(mockUserRepository).save(userArgumentCaptor.capture());
+		verify(mockUserRepository).save(userArgumentCaptor.capture());
+		User saved = userArgumentCaptor.getValue();
 
-		User savedUser = userArgumentCaptor.getValue();
+		Assertions.assertNotNull(saved);
+		Assertions.assertEquals(registerRequest.getFirstName(), saved.getFirstName());
+		Assertions.assertEquals(registerRequest.getLastName(), saved.getLastName());
+		Assertions.assertEquals(registerRequest.getPhoneNumber(), saved.getPhoneNumber());
 
-		Assertions.assertNotNull(savedUser);
-		Assertions.assertEquals(registerRequest.getFirstName(), savedUser.getFirstName());
-		Assertions.assertEquals(registerRequest.getLastName(), savedUser.getLastName());
-		Assertions.assertEquals(registerRequest.getEmail(), savedUser.getEmail());
-		Assertions.assertEquals(password, savedUser.getPassword());
-		Assertions.assertEquals(Role.USER, savedUser.getRole());
-		Assertions.assertEquals(UserStatus.ACTIVE, savedUser.getStatus());
+		String expectedEmail = registerRequest.getEmail() == null ? null
+				: registerRequest.getEmail().trim().toLowerCase();
+		Assertions.assertEquals(expectedEmail, saved.getEmail());
+
+		Assertions.assertEquals(encoded, saved.getPassword());
+		Assertions.assertEquals(Role.USER, saved.getRole());
+		Assertions.assertEquals(UserStatus.ACTIVE, saved.getStatus());
 	}
 
 	@Test
-	@DisplayName("Method: register -> Throw AppException when email already exists")
-	void register_WhenEmailAlreadyExists_ShouldThrowAppException() {
-		for (int i = 0; i < maxTestCase; ++i) {
-			RegisterRequest request = createSampleRegisterRequest();
+	@DisplayName("Method: register -> should throw EMAIL_ALREADY_EXISTS when email exists (validator throws)")
+	void register_WhenEmailAlreadyExists_ShouldThrow() {
+		for (int i = 0; i < maxTestCase; i++) {
+			RegisterRequest req = createSampleRegisterRequest();
+			Mockito.doThrow(new ResourceException(HttpStatus.BAD_REQUEST, ErrorMessage.EMAIL_ALREADY_EXISTS))
+					.when(mockUserServiceValidator).ensureEmailNotExists(anyString());
 
-			Mockito.when(mockUserRepository.existsByEmail(request.getEmail())).thenReturn(Optional.of(true));
-
-			ResourceException exception = Assertions.assertThrows(ResourceException.class, () -> {
-				userServiceImpl.register(request);
-			});
-
-			Assertions.assertEquals(exception.getMessage(), ErrorMessage.EMAIL_ALREADY_EXISTS);
+			ResourceException ex = Assertions.assertThrows(ResourceException.class,
+					() -> userServiceImpl.register(req));
+			Assertions.assertEquals(ErrorMessage.EMAIL_ALREADY_EXISTS, ex.getMessage());
 		}
 	}
 
 	@Test
-	@DisplayName("login -> throws LOGIN_FALSE when user not found")
+	@DisplayName("Method: login -> should throw INVALID_CREDENTIALS when user not found")
 	void login_UserNotFound_ShouldThrow() {
-		for (int i = 0; i < maxTestCase; ++i) {
+		for (int i = 0; i < maxTestCase; i++) {
 			LoginRequest loginRequest = createSampleLoginRequest();
-			Mockito.when(mockUserRepository.findByEmail(loginRequest.getEmail())).thenReturn(Optional.empty());
+			when(mockUserRepository.findByEmail(anyString())).thenReturn(Optional.empty());
 
-			ResourceException resourceException = Assertions.assertThrows(ResourceException.class,
+			ResourceException ex = Assertions.assertThrows(ResourceException.class,
 					() -> userServiceImpl.login(loginRequest));
-			Assertions.assertEquals(ErrorMessage.INVALID_CREDENTIALS, resourceException.getMessage());
+			Assertions.assertEquals(ErrorMessage.INVALID_CREDENTIALS, ex.getMessage());
 		}
 	}
 
 	@Test
-	@DisplayName("login -> throws LOGIN_FALSE when password invalid")
+	@DisplayName("Method: login -> should throw INVALID_CREDENTIALS when password is wrong (validator throws)")
 	void login_WrongPassword_ShouldThrow() {
-		for (int i = 0; i < maxTestCase; ++i) {
+		for (int i = 0; i < maxTestCase; i++) {
 			LoginRequest loginRequest = createSampleLoginRequest();
-			User user = User.builder().id(42L).email(loginRequest.getEmail()).password("encoded").role(Role.USER)
-					.status(UserStatus.ACTIVE).build();
-
-			Mockito.when(mockUserRepository.findByEmail(loginRequest.getEmail())).thenReturn(Optional.of(user));
-			Mockito.when(mockPasswordEncoder.matches(loginRequest.getPassword(), user.getPassword())).thenReturn(false);
-
-			ResourceException resourceException = Assertions.assertThrows(ResourceException.class,
-					() -> userServiceImpl.login(loginRequest));
-			Assertions.assertEquals(ErrorMessage.INVALID_CREDENTIALS, resourceException.getMessage());
-		}
-	}
-
-	@Test
-	@DisplayName("login -> throws ACCOUNT_INACTIVE when user status != ACTIVE")
-	void login_InactiveAccount_ShouldThrow() {
-		for (int i = 0; i < maxTestCase; ++i) {
-			LoginRequest loginRequest = createSampleLoginRequest();
-			User user = User.builder().id(7L).email(loginRequest.getEmail()).password("encoded").role(Role.USER)
-					.status(UserStatus.INACTIVE).build();
-
-			Mockito.when(mockUserRepository.findByEmail(loginRequest.getEmail())).thenReturn(Optional.of(user));
-			Mockito.when(mockPasswordEncoder.matches(loginRequest.getPassword(), user.getPassword())).thenReturn(true);
-
-			ResourceException resourceException = Assertions.assertThrows(ResourceException.class,
-					() -> userServiceImpl.login(loginRequest));
-			Assertions.assertEquals(ErrorMessage.ACCOUNT_INACTIVE, resourceException.getMessage());
-		}
-	}
-
-	@Test
-	@DisplayName("Method: login -> success returns access & refresh tokens")
-	void login_WhenValidCredentials_ShouldReturnToken() {
-		for (int i = 0; i < maxTestCase; ++i) {
-			User user = User.builder().id(123L).email(createSampleLoginRequest().getEmail()).password("ENC_PWD")
+			User user = User.builder().id(42L).email(loginRequest.getEmail().trim().toLowerCase()).password("encoded")
 					.role(Role.USER).status(UserStatus.ACTIVE).build();
 
-			String rawPwd = "raw";
-			LoginRequest req = LoginRequest.builder().email(user.getEmail()).password(rawPwd).build();
+			when(mockUserRepository.findByEmail(user.getEmail())).thenReturn(Optional.of(user));
+			Mockito.doThrow(new ResourceException(HttpStatus.BAD_REQUEST, ErrorMessage.INVALID_CREDENTIALS))
+					.when(mockUserServiceValidator).validateCredentials(anyString(), Mockito.eq(user));
+
+			ResourceException ex = Assertions.assertThrows(ResourceException.class,
+					() -> userServiceImpl.login(loginRequest));
+			Assertions.assertEquals(ErrorMessage.INVALID_CREDENTIALS, ex.getMessage());
+
+			Mockito.verifyNoInteractions(mockJwtService, mockRefreshTokenService);
+		}
+	}
+
+	@Test
+	@DisplayName("Method: login -> should throw ACCOUNT_INACTIVE when user is not ACTIVE (validator throws)")
+	void login_InactiveAccount_ShouldThrow() {
+		for (int i = 0; i < maxTestCase; i++) {
+			LoginRequest loginRequest = createSampleLoginRequest();
+			User user = User.builder().id(7L).email(loginRequest.getEmail().trim().toLowerCase()).password("encoded")
+					.role(Role.USER).status(UserStatus.INACTIVE).build();
+
+			when(mockUserRepository.findByEmail(user.getEmail())).thenReturn(Optional.of(user));
+			Mockito.doThrow(new ResourceException(HttpStatus.BAD_REQUEST, ErrorMessage.ACCOUNT_INACTIVE))
+					.when(mockUserServiceValidator).validateCredentials(anyString(), Mockito.eq(user));
+
+			ResourceException ex = Assertions.assertThrows(ResourceException.class,
+					() -> userServiceImpl.login(loginRequest));
+			Assertions.assertEquals(ErrorMessage.ACCOUNT_INACTIVE, ex.getMessage());
+
+			Mockito.verifyNoInteractions(mockJwtService, mockRefreshTokenService);
+		}
+	}
+
+	@Test
+	@DisplayName("Method: login -> should return access & refresh tokens when credentials are valid")
+	void login_WhenValidCredentials_ShouldReturnToken() {
+		for (int i = 0; i < maxTestCase; i++) {
+			String email = createSampleLoginRequest().getEmail();
+			User user = User.builder().id(123L).email(email.trim().toLowerCase()).password("ENC_PWD").role(Role.USER)
+					.status(UserStatus.ACTIVE).build();
+
+			LoginRequest req = LoginRequest.builder().email(email).password("raw").build();
 
 			String access = UUID.randomUUID().toString();
-			RefreshToken rt = RefreshToken.builder().id(1L).userId(user.getId()).token(UUID.randomUUID().toString())
-					.expiryDate(Instant.now().plusSeconds(3600)).build();
+			RefreshToken rt = createSampleRefreshToken(user.getId());
 
-			Mockito.when(mockUserRepository.findByEmail(user.getEmail())).thenReturn(Optional.of(user));
-			Mockito.when(mockPasswordEncoder.matches(rawPwd, user.getPassword())).thenReturn(true);
-			Mockito.when(mockJwtTokenProvider.generateAccessToken(user.getId(), user.getRole())).thenReturn(access);
-			Mockito.when(mockRefreshTokenService.createRefreshToken(user.getId())).thenReturn(rt);
+			when(mockUserRepository.findByEmail(user.getEmail())).thenReturn(Optional.of(user));
+			Mockito.doNothing().when(mockUserServiceValidator).validateCredentials(anyString(), Mockito.eq(user));
+			when(mockJwtService.generateAccessToken(user.getId(), user.getRole())).thenReturn(access);
+			when(mockRefreshTokenService.createRefreshToken(user.getId())).thenReturn(rt);
 
 			Token token = userServiceImpl.login(req);
 
@@ -211,155 +211,151 @@ class UserServiceImplTest {
 	}
 
 	@Test
-	@DisplayName("Method: getUser -> return UserDto when found")
+	@DisplayName("Method: getUser -> should return UserDto when found")
 	void getUser_WhenFound_ShouldReturnDto() {
 		User user = User.builder().id(5L).email("a@b.com").firstName("A").lastName("B").phoneNumber("0909").build();
+
 		when(mockUserRepository.findById(5L)).thenReturn(Optional.of(user));
 
-		UserDto userDto = userServiceImpl.getUser(5L);
+		UserDto dto = userServiceImpl.getUser(5L);
 
-		Assertions.assertEquals(user.getEmail(), userDto.getEmail());
-		Assertions.assertEquals(user.getFirstName(), userDto.getFirstName());
-		Assertions.assertEquals(user.getLastName(), userDto.getLastName());
-		Assertions.assertEquals(user.getPhoneNumber(), userDto.getPhoneNumber());
+		Assertions.assertEquals(user.getEmail(), dto.getEmail());
+		Assertions.assertEquals(user.getFirstName(), dto.getFirstName());
+		Assertions.assertEquals(user.getLastName(), dto.getLastName());
+		Assertions.assertEquals(user.getPhoneNumber(), dto.getPhoneNumber());
 	}
 
 	@Test
-	@DisplayName("Method: getUser -> throws when not found")
+	@DisplayName("Method: getUser -> should throw when not found")
 	void getUser_WhenNotFound_ShouldThrow() {
 		when(mockUserRepository.findById(99L)).thenReturn(Optional.empty());
-		Assertions.assertThrows(ResourceException.class, () -> userServiceImpl.getUser(99L));
+		ResourceException ex = Assertions.assertThrows(ResourceException.class, () -> userServiceImpl.getUser(99L));
+		Assertions.assertEquals(ErrorMessage.ID_NOT_FOUND, ex.getMessage());
 	}
 
 	@Test
-	@DisplayName("Method: updateUser -> admin can update others")
-	void updateUser_WhenAdmin_ShouldUpdate() {
-		try (MockedStatic<SecurityUtil> util = mockStatic(SecurityUtil.class)) {
-			Long targetId = 10L;
+	@DisplayName("Method: updateUser -> should update when validator allows")
+	void updateUser_WhenAllowed_ShouldUpdate() {
+		Long targetId = 10L;
 
-			util.when(SecurityUtil::getCurrentUserId).thenReturn(Optional.of(1L));
-			util.when(() -> SecurityUtil.hasRole("ADMIN")).thenReturn(true);
+		Mockito.doNothing().when(mockUserServiceValidator).ensureCanUpdateUser(targetId);
 
-			User existing = User.builder().id(targetId).email("old@e.com").firstName("Old").lastName("Name")
-					.phoneNumber("0909").status(UserStatus.ACTIVE).role(Role.USER).build();
-			when(mockUserRepository.findById(targetId)).thenReturn(Optional.of(existing));
+		User existing = User.builder().id(targetId).email("old@e.com").firstName("Old").lastName("Name")
+				.phoneNumber("0909").status(UserStatus.ACTIVE).role(Role.USER).build();
+		when(mockUserRepository.findById(targetId)).thenReturn(Optional.of(existing));
 
-			UserDto dto = UserDto.builder().email("new@e.com").firstName("NewFN").lastName("NewLN").phoneNumber("0911")
-					.build();
+		UserDto dto = UserDto.builder().email("new@e.com").firstName("NewFN").lastName("NewLN").phoneNumber("0911")
+				.build();
 
-			when(mockUserRepository.existsByEmail("new@e.com")).thenReturn(Optional.of(false));
+		when(mockUserRepository.existsByEmail("new@e.com")).thenReturn(Optional.of(false));
 
-			userServiceImpl.updateUser(targetId, dto);
+		userServiceImpl.updateUser(targetId, dto);
 
-			verify(mockUserRepository).update(userArgumentCaptor.capture());
-			User updated = userArgumentCaptor.getValue();
-			Assertions.assertEquals("new@e.com", updated.getEmail());
-			Assertions.assertEquals("NewFN", updated.getFirstName());
-			Assertions.assertEquals("NewLN", updated.getLastName());
-			Assertions.assertEquals("0911", updated.getPhoneNumber());
-			Assertions.assertNotNull(updated.getUpdated());
-		}
+		verify(mockUserRepository).update(userArgumentCaptor.capture());
+		User updated = userArgumentCaptor.getValue();
+
+		Assertions.assertEquals("new@e.com", updated.getEmail());
+		Assertions.assertEquals("NewFN", updated.getFirstName());
+		Assertions.assertEquals("NewLN", updated.getLastName());
+		Assertions.assertEquals("0911", updated.getPhoneNumber());
 	}
 
 	@Test
-	@DisplayName("Method: updateUser -> non-admin cannot update others (FORBIDDEN)")
-	void updateUser_WhenNonAdminUpdatingOthers_ShouldThrowForbidden() {
-		try (MockedStatic<SecurityUtil> util = mockStatic(SecurityUtil.class)) {
-			util.when(SecurityUtil::getCurrentUserId).thenReturn(Optional.of(2L));
-			util.when(() -> SecurityUtil.hasRole("ADMIN")).thenReturn(false);
+	@DisplayName("Method: updateUser -> should throw when validator blocks")
+	void updateUser_WhenValidatorBlocks_ShouldThrow() {
+		Long targetId = 3L;
+		Mockito.doThrow(new ResourceException(HttpStatus.FORBIDDEN, "FORBIDDEN")).when(mockUserServiceValidator)
+				.ensureCanUpdateUser(targetId);
 
-			Assertions.assertThrows(ResourceException.class, () -> {
-				userServiceImpl.updateUser(3L, UserDto.builder().firstName("X").build());
-			});
-		}
+		Assertions.assertThrows(ResourceException.class,
+				() -> userServiceImpl.updateUser(targetId, UserDto.builder().firstName("X").build()));
+
+		Mockito.verifyNoInteractions(mockUserRepository);
 	}
 
 	@Test
-	@DisplayName("Method: updateUser -> throws UNWANTED_EXCEPTION when no actor id")
-	void updateUser_WhenNoCurrentUser_ShouldThrowUnwantedException() {
-		try (MockedStatic<SecurityUtil> util = mockStatic(SecurityUtil.class)) {
-			util.when(SecurityUtil::getCurrentUserId).thenReturn(Optional.empty());
-
-			Assertions.assertThrows(ResourceException.class, () -> {
-				userServiceImpl.updateUser(1L, UserDto.builder().build());
-			});
-		}
-	}
-
-	@Test
-	@DisplayName("Method: updateUser -> throws NOT_FOUND when target user not found")
+	@DisplayName("Method: updateUser -> should throw NOT_FOUND when target user not found")
 	void updateUser_WhenTargetNotFound_ShouldThrowNotFound() {
-		try (MockedStatic<SecurityUtil> util = mockStatic(SecurityUtil.class)) {
-			util.when(SecurityUtil::getCurrentUserId).thenReturn(Optional.of(5L));
-			util.when(() -> SecurityUtil.hasRole("ADMIN")).thenReturn(true);
+		Long targetId = 99L;
+		Mockito.doNothing().when(mockUserServiceValidator).ensureCanUpdateUser(targetId);
+		when(mockUserRepository.findById(targetId)).thenReturn(Optional.empty());
 
-			when(mockUserRepository.findById(99L)).thenReturn(Optional.empty());
-
-			Assertions.assertThrows(ResourceException.class, () -> {
-				userServiceImpl.updateUser(99L, UserDto.builder().build());
-			});
-		}
+		ResourceException ex = Assertions.assertThrows(ResourceException.class,
+				() -> userServiceImpl.updateUser(targetId, UserDto.builder().build()));
+		Assertions.assertEquals(ErrorMessage.ID_NOT_FOUND, ex.getMessage());
 	}
 
 	@Test
-	@DisplayName("Method: updateUser -> change email triggers existsByEmail check")
+	@DisplayName("updateUser -> should check existsByEmail when email is changed")
 	void updateUser_WhenEmailChanged_ShouldCheckExistsByEmail() {
-		try (MockedStatic<SecurityUtil> util = mockStatic(SecurityUtil.class)) {
-			Long id = 7L;
+		Long id = 7L;
 
-			util.when(SecurityUtil::getCurrentUserId).thenReturn(Optional.of(id));
-			util.when(() -> SecurityUtil.hasRole("ADMIN")).thenReturn(false);
+		Mockito.doNothing().when(mockUserServiceValidator).ensureCanUpdateUser(id);
 
-			User existing = User.builder().id(id).email("old@e.com").firstName("A").lastName("B").phoneNumber("0909")
-					.status(UserStatus.ACTIVE).role(Role.USER).build();
-			when(mockUserRepository.findById(id)).thenReturn(Optional.of(existing));
+		User existing = User.builder().id(id).email("old@e.com").firstName("A").lastName("B").phoneNumber("0909")
+				.status(UserStatus.ACTIVE).role(Role.USER).build();
+		when(mockUserRepository.findById(id)).thenReturn(Optional.of(existing));
 
-			UserDto dto = UserDto.builder().email("new@e.com").build();
+		UserDto dto = UserDto.builder().email("new@e.com").build();
 
-			when(mockUserRepository.existsByEmail("new@e.com")).thenReturn(Optional.of(false));
+		when(mockUserRepository.existsByEmail("new@e.com")).thenReturn(Optional.of(false));
 
-			userServiceImpl.updateUser(id, dto);
+		userServiceImpl.updateUser(id, dto);
 
-			verify(mockUserRepository).existsByEmail("new@e.com");
-			verify(mockUserRepository).update(any(User.class));
+		verify(mockUserRepository).existsByEmail("new@e.com");
+		verify(mockUserRepository).update(any(User.class));
+	}
+
+	@Test
+	@DisplayName("Method: refresh -> should throw INVALID_REFRESH_TOKEN when validator fails")
+	void refresh_WhenRefreshTokenInvalid_ShouldThrow() {
+		for (int i = 0; i < maxTestCase; i++) {
+			String invalid = UUID.randomUUID().toString();
+			Mockito.when(mockUserServiceValidator.findAndVerifyRefreshToken(invalid))
+					.thenThrow(new ResourceException(HttpStatus.BAD_REQUEST, ErrorMessage.INVALID_REFRESH_TOKEN));
+
+			ResourceException ex = Assertions.assertThrows(ResourceException.class,
+					() -> userServiceImpl.refresh(invalid));
+			Assertions.assertEquals(ErrorMessage.INVALID_REFRESH_TOKEN, ex.getMessage());
 		}
 	}
 
 	@Test
-	@DisplayName("Method: refresh -> Throws TokenRefreshException when refresh token does not exist")
-	void refresh_WhenRefreshTokenNotFound_ShouldThrowTokenRefreshException() {
-		for (int i = 0; i < maxTestCase; ++i) {
-			String invalidToken = UUID.randomUUID().toString();
-			Mockito.when(mockRefreshTokenService.findByToken(invalidToken)).thenReturn(Optional.empty());
+	@DisplayName("Method: refresh -> should throw INVALID_REFRESH_TOKEN when userId in token does not exist")
+	void refresh_WhenUserOfTokenNotFound_ShouldThrow() {
+		Long ghostUserId = 777L;
+		RefreshToken rt = createSampleRefreshToken(ghostUserId);
 
-			Assertions.assertThrows(ResourceException.class, () -> {
-				userServiceImpl.refresh(invalidToken);
-			});
-		}
+		when(mockUserServiceValidator.findAndVerifyRefreshToken(rt.getToken())).thenReturn(rt);
+		when(mockUserRepository.findById(ghostUserId)).thenReturn(Optional.empty());
+
+		ResourceException ex = Assertions.assertThrows(ResourceException.class,
+				() -> userServiceImpl.refresh(rt.getToken()));
+		Assertions.assertEquals(ErrorMessage.INVALID_REFRESH_TOKEN, ex.getMessage());
 	}
 
 	@Test
-	@DisplayName("Method: refresh -> Throws AccountResourcesException when the user's token does not exist")
-	void refresh_WhenUserOfTokenNotFound_ShouldThrowAccountResourcesException() {
-		for (int i = 0; i < maxTestCase; ++i) {
-			User user = createSampleUser();
-			RefreshToken refreshToken = createSampleRefreshToken(user);
+	@DisplayName("Method: refresh -> should return new access token while keeping refresh token")
+	void refresh_WhenValid_ShouldReturnNewAccessToken() {
+		Long userId = 55L;
+		User user = User.builder().id(userId).email("u@e.com").role(Role.USER).status(UserStatus.ACTIVE).build();
+		RefreshToken rt = createSampleRefreshToken(userId);
 
-			Mockito.when(mockRefreshTokenService.findByToken(refreshToken.getToken()))
-					.thenReturn(Optional.of(refreshToken));
-			Mockito.doNothing().when(mockRefreshTokenService).verifyExpiration(refreshToken);
-			Mockito.when(mockUserRepository.findById(user.getId())).thenReturn(Optional.empty());
+		when(mockUserServiceValidator.findAndVerifyRefreshToken(rt.getToken())).thenReturn(rt);
+		when(mockUserRepository.findById(userId)).thenReturn(Optional.of(user));
+		String newAccess = UUID.randomUUID().toString();
+		when(mockJwtService.generateAccessToken(userId, user.getRole())).thenReturn(newAccess);
 
-			Assertions.assertThrows(ResourceException.class, () -> {
-				userServiceImpl.refresh(refreshToken.getToken());
-			});
-		}
+		Token token = userServiceImpl.refresh(rt.getToken());
+
+		Assertions.assertEquals(newAccess, token.getAccessToken());
+		Assertions.assertEquals(rt.getToken(), token.getRefreshToken());
 	}
 
 	@Test
-	@DisplayName("Method: getResponseCookieRefreshToken -> sets correct cookie attributes")
+	@DisplayName("Method: getResponseCookieRefreshToken -> should set correct cookie attributes & maxAge")
 	void getResponseCookieRefreshToken_ShouldReturnCookieWithConfiguredMaxAge() {
-		ReflectionTestUtils.setField(userServiceImpl, "refreshTokenExpirationMs", 7200000L); // 2h
+		ReflectionTestUtils.setField(userServiceImpl, "refreshTokenExpirationMs", 7200000L);
 		String token = UUID.randomUUID().toString();
 
 		ResponseCookie cookie = userServiceImpl.getResponseCookieRefreshToken(token);
@@ -372,5 +368,4 @@ class UserServiceImplTest {
 		Assertions.assertEquals(7200000L / 1000, cookie.getMaxAge().getSeconds());
 		Assertions.assertEquals("Strict", cookie.getSameSite());
 	}
-
 }
