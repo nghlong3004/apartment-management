@@ -1,13 +1,14 @@
 package vn.io.nghlong3004.apartment_management.service.impl;
 
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseCookie;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import vn.io.nghlong3004.apartment_management.exception.ErrorState;
+import vn.io.nghlong3004.apartment_management.constant.ErrorMessage;
 import vn.io.nghlong3004.apartment_management.exception.ResourceException;
 import vn.io.nghlong3004.apartment_management.model.RefreshToken;
 import vn.io.nghlong3004.apartment_management.model.Role;
@@ -21,7 +22,7 @@ import vn.io.nghlong3004.apartment_management.repository.UserRepository;
 import vn.io.nghlong3004.apartment_management.service.JWTService;
 import vn.io.nghlong3004.apartment_management.service.RefreshTokenService;
 import vn.io.nghlong3004.apartment_management.service.UserService;
-import vn.io.nghlong3004.apartment_management.util.SecurityUtil;
+import vn.io.nghlong3004.apartment_management.service.validator.UserServiceValidator;
 
 @Service
 @RequiredArgsConstructor
@@ -33,14 +34,17 @@ public class UserServiceImpl implements UserService {
 
 	private final UserRepository userRepository;
 	private final PasswordEncoder passwordEncoder;
-	private final JWTService jwtTokenProvider;
+	private final JWTService jwtService;
 	private final RefreshTokenService refreshTokenService;
+	private final UserServiceValidator userServiceValidator;
 
 	@Override
 	public void register(RegisterRequest registerRequest) {
-		log.info("Start the registration process for email: {}", registerRequest.getEmail());
+		log.info("Register start for email={}", registerRequest.getEmail());
 
-		validateEmail(registerRequest);
+		registerRequest.setEmail(normalizeEmail(registerRequest.getEmail()));
+
+		userServiceValidator.ensureEmailNotExists(registerRequest.getEmail());
 
 		User user = User.builder().firstName(registerRequest.getFirstName()).lastName(registerRequest.getLastName())
 				.email(registerRequest.getEmail()).phoneNumber(registerRequest.getPhoneNumber())
@@ -48,80 +52,90 @@ public class UserServiceImpl implements UserService {
 				.status(UserStatus.ACTIVE).floor(null).build();
 
 		userRepository.save(user);
-		log.info("User registration successful with email: {}.", user.getEmail());
+		log.info("Register success for email={}", user.getEmail());
 	}
 
 	@Override
 	public Token login(LoginRequest loginRequest) {
-		log.info("Start the login process for email: {}", loginRequest.getEmail());
+		log.info("Login start for email={}", loginRequest.getEmail());
 
-		User user = userRepository.findByEmail(loginRequest.getEmail()).orElseThrow(() -> {
-			log.warn("Login failed. No user found with email: {}", loginRequest.getEmail());
-			return new ResourceException(ErrorState.LOGIN_FALSE);
+		User user = userRepository.findByEmail(normalizeEmail(loginRequest.getEmail())).orElseThrow(() -> {
+			log.warn("Login failed: email not found {}", loginRequest.getEmail());
+			return new ResourceException(HttpStatus.BAD_REQUEST, ErrorMessage.INVALID_CREDENTIALS);
 		});
 
-		log.info("Found user with ID: {}", user.getId());
+		userServiceValidator.validateCredentials(loginRequest.getPassword(), user);
 
-		validateAccount(loginRequest.getPassword(), user);
-
-		String accessToken = jwtTokenProvider.generateAccessToken(user.getId(), user.getRole());
-		log.debug("Successfully created access token for user ID: {}", user.getId());
-
+		String accessToken = jwtService.generateAccessToken(user.getId(), user.getRole());
 		RefreshToken refreshToken = refreshTokenService.createRefreshToken(user.getId());
-		log.debug("Successfully generated refresh token for user ID: {}", user.getId());
 
-		log.info("User {} logged in successfully.", user.getEmail());
+		log.info("Login success userId={}", user.getId());
 		return Token.builder().accessToken(accessToken).refreshToken(refreshToken.getToken()).build();
 	}
 
 	@Override
 	public Token refresh(String requestRefreshToken) {
-		log.info("Start the token refresh process.");
+		log.info("Refresh token start");
 
-		RefreshToken refreshToken = getRefreshToken(requestRefreshToken);
+		RefreshToken refreshToken = userServiceValidator.findAndVerifyRefreshToken(requestRefreshToken);
 
 		User user = userRepository.findById(refreshToken.getUserId()).orElseThrow(() -> {
-			log.error("Data Inconsistency Error: No user with ID: {} associated with refresh token found.",
-					refreshToken.getUserId());
-			return new ResourceException(ErrorState.ERROR_REFRESH_TOKEN);
+			log.error("Refresh token points to non-existing userId={}", refreshToken.getUserId());
+			return new ResourceException(HttpStatus.BAD_REQUEST, ErrorMessage.INVALID_REFRESH_TOKEN);
 		});
 
-		String accessToken = jwtTokenProvider.generateAccessToken(user.getId(), user.getRole());
-		log.info("Refresh access token successfully for user ID: {}", user.getId());
+		String newAccessToken = jwtService.generateAccessToken(user.getId(), user.getRole());
+		log.info("Refresh token success userId={}", user.getId());
 
-		return Token.builder().accessToken(accessToken).refreshToken(refreshToken.getToken()).build();
+		return Token.builder().accessToken(newAccessToken).refreshToken(refreshToken.getToken()).build();
 	}
 
 	@Override
 	public ResponseCookie getResponseCookieRefreshToken(String refreshToken) {
-		log.debug("Create ResponseCookie for refresh token.");
-		ResponseCookie responseCookie = ResponseCookie.from("refresh_token", refreshToken).httpOnly(true).secure(true)
-				.path("/").maxAge(refreshTokenExpirationMs / 1000).sameSite("Strict").build();
-		return responseCookie;
+		log.debug("Build refresh token cookie");
+		return ResponseCookie.from("refresh_token", refreshToken).httpOnly(true).secure(true).path("/")
+				.maxAge(refreshTokenExpirationMs / 1000).sameSite("Strict").build();
 	}
 
 	@Override
 	public void updateUser(Long id, UserDto userDto) {
+		userServiceValidator.ensureCanUpdateUser(id);
+		log.info("Update user start id={}", id);
+		User user = userRepository.findById(id)
+				.orElseThrow(() -> new ResourceException(HttpStatus.NOT_FOUND, ErrorMessage.ID_NOT_FOUND));
 
-		validateAuthorize(id);
-
-		log.info("Start update user by id: {}", id);
-
-		User user = getUserUpdate(id, userDto);
-
-		userRepository.update(user);
+		userRepository.update(mapUserDtoToUser(id, userDto, user));
+		log.info("Update user success id={}", id);
 	}
 
-	private User getUserUpdate(Long id, UserDto userDto) {
-		User user = userRepository.findById(id).orElseThrow(() -> new ResourceException(ErrorState.NOT_FOUND));
+	@Override
+	public UserDto getUser(Long id) {
+		log.info("Get user start id={}", id);
 
+		User user = userRepository.findById(id)
+				.orElseThrow(() -> new ResourceException(HttpStatus.BAD_REQUEST, ErrorMessage.ID_NOT_FOUND));
+
+		log.info("Get user success id={}", id);
+		return UserDto.builder().email(user.getEmail()).firstName(user.getFirstName()).lastName(user.getLastName())
+				.phoneNumber(user.getPhoneNumber()).build();
+	}
+
+	private String normalizeEmail(String email) {
+		return email == null ? null : email.trim().toLowerCase();
+	}
+
+	private User mapUserDtoToUser(Long id, UserDto userDto, User currentUser) {
+		User user = currentUser;
 		if (userDto.getEmail() != null) {
-			String newEmail = userDto.getEmail().trim().toLowerCase();
+			String newEmail = normalizeEmail(userDto.getEmail());
 			if (!newEmail.equalsIgnoreCase(user.getEmail())) {
-				userRepository.existsByEmail(newEmail)
-						.orElseThrow(() -> new ResourceException(ErrorState.EXISTS_EMAIL));
+				if (userRepository.existsByEmail(newEmail).orElse(false)) {
+					log.warn("Update user email conflict: id={}, newEmail={}", id, newEmail);
+					throw new ResourceException(HttpStatus.BAD_REQUEST, ErrorMessage.EMAIL_ALREADY_EXISTS);
+				}
+				String oldEmail = user.getEmail();
 				user.setEmail(newEmail);
-				log.info("Email change: {} -> {}", user.getEmail(), newEmail);
+				log.info("Email change: {} -> {}", oldEmail, newEmail);
 			}
 		}
 		if (userDto.getFirstName() != null)
@@ -130,59 +144,8 @@ public class UserServiceImpl implements UserService {
 			user.setLastName(userDto.getLastName());
 		if (userDto.getPhoneNumber() != null)
 			user.setPhoneNumber(userDto.getPhoneNumber());
+
 		return user;
 	}
 
-	private void validateAuthorize(Long id) {
-		Long actorId = SecurityUtil.getCurrentUserId()
-				.orElseThrow(() -> new ResourceException(ErrorState.ACCESS_TOKEN_IS_WRONG));
-
-		if (!SecurityUtil.hasRole("ADMIN") && !actorId.equals(id)) {
-			throw new ResourceException(ErrorState.UPDATE_USER_FORBIDDEN);
-		}
-
-	}
-
-	@Override
-	public UserDto getUser(Long id) {
-		log.info("Start get User by id: {}.", id);
-
-		User user = userRepository.findById(id).orElseThrow(() -> new ResourceException(ErrorState.NOT_FOUND));
-
-		log.info("User with corresponding id exists: {}.", id);
-
-		return UserDto.builder().email(user.getEmail()).firstName(user.getFirstName()).lastName(user.getLastName())
-				.phoneNumber(user.getPhoneNumber()).build();
-	}
-
-	private RefreshToken getRefreshToken(String requestRefreshToken) {
-		log.info("Looking for refresh token in database.");
-		RefreshToken refreshToken = refreshTokenService.findByToken(requestRefreshToken).orElseThrow(() -> {
-			log.warn("Token refresh request failed: Refresh token does not exist in database.");
-			throw new ResourceException(ErrorState.ERROR_REFRESH_TOKEN);
-		});
-
-		log.debug("Refresh token found. Verifying expiration time..");
-		refreshTokenService.verifyExpiration(refreshToken);
-
-		return refreshToken;
-	}
-
-	private void validateAccount(String rawPassword, User user) {
-		if (!passwordEncoder.matches(rawPassword, user.getPassword())) {
-			log.warn("Authentication failed for user {}: Incorrect password.", user.getEmail());
-			throw new ResourceException(ErrorState.LOGIN_FALSE);
-		}
-		if (user.getStatus() != UserStatus.ACTIVE) {
-			log.warn("Authentication failed for user {}: Account is inactive.", user.getEmail());
-			throw new ResourceException(ErrorState.ACCOUNT_INACTIVE);
-		}
-	}
-
-	private void validateEmail(RegisterRequest registerRequest) {
-		if (userRepository.existsByEmail(registerRequest.getEmail()).orElse(false)) {
-			log.warn("Registration failed: Email {} already exists.", registerRequest.getEmail());
-			throw new ResourceException(ErrorState.EXISTS_EMAIL);
-		}
-	}
 }

@@ -14,7 +14,9 @@ import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
 import org.springframework.security.web.csrf.CsrfTokenRequestAttributeHandler;
 
 import lombok.RequiredArgsConstructor;
+import vn.io.nghlong3004.apartment_management.security.CustomAccessDeniedHandler;
 import vn.io.nghlong3004.apartment_management.security.JWTAuthenticationFilter;
+import vn.io.nghlong3004.apartment_management.security.JwtAuthenticationEntryPoint;
 
 @Configuration
 @EnableWebSecurity
@@ -22,6 +24,8 @@ import vn.io.nghlong3004.apartment_management.security.JWTAuthenticationFilter;
 public class SecurityConfig {
 
 	private final JWTAuthenticationFilter jwtAuthenticationFilter;
+	private final JwtAuthenticationEntryPoint authenticationEntryPoint;
+	private final CustomAccessDeniedHandler accessDeniedHandler;
 
 	@Bean
 	public PasswordEncoder passwordEncoder() {
@@ -39,6 +43,8 @@ public class SecurityConfig {
 						.csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse()))
 				.authorizeHttpRequests(auth -> auth.requestMatchers("/api/v1/auth/**").permitAll()
 						.requestMatchers(HttpMethod.GET, "/api/v1/user/{id}").permitAll().anyRequest().authenticated())
+				.exceptionHandling(exception -> exception.authenticationEntryPoint(authenticationEntryPoint)
+						.accessDeniedHandler(accessDeniedHandler))
 				.addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
 		return httpSecurity.build();

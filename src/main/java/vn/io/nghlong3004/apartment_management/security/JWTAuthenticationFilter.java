@@ -4,21 +4,25 @@ import java.io.IOException;
 import java.util.Collection;
 
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
-import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
+import io.jsonwebtoken.ExpiredJwtException;
+import io.jsonwebtoken.JwtException;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import vn.io.nghlong3004.apartment_management.constant.ErrorMessage;
 import vn.io.nghlong3004.apartment_management.service.JWTService;
+import vn.io.nghlong3004.apartment_management.service.impl.UserDetailsServiceImpl;
 
 @Component
 @RequiredArgsConstructor
@@ -26,7 +30,8 @@ import vn.io.nghlong3004.apartment_management.service.JWTService;
 public class JWTAuthenticationFilter extends OncePerRequestFilter {
 
 	private final JWTService jwtService;
-	private final UserDetailsService userDetailsService;
+	private final UserDetailsServiceImpl userDetailsService;
+	private final JwtAuthenticationEntryPoint authenticationEntryPoint;
 
 	@Override
 	protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
@@ -47,17 +52,29 @@ public class JWTAuthenticationFilter extends OncePerRequestFilter {
 		String token = authHeader.substring(7);
 		log.info("Extracted JWT token: {}", token);
 
-		if (jwtService.isValid(token)) {
-			Long userId = jwtService.getUserId(token);
-			log.info("JWT validated successfully for userId={}", userId);
-
-			UserDetails user = userDetailsService.loadUserByUsername(String.valueOf(userId));
-			Collection<? extends GrantedAuthority> authorities = jwtService.getAuthorities(token);
-			UsernamePasswordAuthenticationToken auth = new UsernamePasswordAuthenticationToken(user, null,
-					(authorities == null || authorities.isEmpty()) ? user.getAuthorities() : authorities);
-			auth.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
-			SecurityContextHolder.getContext().setAuthentication(auth);
+		try {
+			jwtService.validateOrThrow(token);
+		} catch (ExpiredJwtException e) {
+			authenticationEntryPoint.commence(request, response,
+					new AuthenticationException(ErrorMessage.ACCESS_TOKEN_EXPIRED) {
+					});
+			return;
+		} catch (JwtException e) {
+			authenticationEntryPoint.commence(request, response,
+					new AuthenticationException(ErrorMessage.INVALID_ACCESS_TOKEN) {
+					});
+			return;
 		}
+
+		Long userId = jwtService.getUserId(token);
+		log.info("JWT validated successfully for userId={}", userId);
+
+		UserDetails user = userDetailsService.loadUserById(userId);
+		Collection<? extends GrantedAuthority> authorities = jwtService.getAuthorities(token);
+		UsernamePasswordAuthenticationToken auth = new UsernamePasswordAuthenticationToken(user, null,
+				(authorities == null || authorities.isEmpty()) ? user.getAuthorities() : authorities);
+		auth.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+		SecurityContextHolder.getContext().setAuthentication(auth);
 		filterChain.doFilter(request, response);
 	}
 

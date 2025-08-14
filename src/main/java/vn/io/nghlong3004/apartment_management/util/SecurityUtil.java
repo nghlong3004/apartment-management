@@ -6,10 +6,10 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
 
-import lombok.NoArgsConstructor;
+import lombok.experimental.UtilityClass;
 import vn.io.nghlong3004.apartment_management.model.UserPrincipal;
 
-@NoArgsConstructor
+@UtilityClass
 public class SecurityUtil {
 
 	public static Optional<Long> getCurrentUserId() {

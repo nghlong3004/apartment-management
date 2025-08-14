@@ -14,8 +14,9 @@ import org.mockito.Captor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.http.HttpStatus;
 
-import vn.io.nghlong3004.apartment_management.exception.ErrorState;
+import vn.io.nghlong3004.apartment_management.constant.ErrorMessage;
 import vn.io.nghlong3004.apartment_management.exception.ResourceException;
 import vn.io.nghlong3004.apartment_management.model.dto.UserDto;
 import vn.io.nghlong3004.apartment_management.service.UserService;
@@ -55,7 +56,8 @@ class UserControllerTest {
 	@DisplayName("GET /api/v1/user/{id} -> should throw when user not found")
 	void getProfile_ShouldThrowWhenNotFound() {
 		Long id = 999L;
-		when(mockUserService.getUser(id)).thenThrow(new ResourceException(ErrorState.NOT_FOUND));
+		when(mockUserService.getUser(id))
+				.thenThrow(new ResourceException(HttpStatus.BAD_REQUEST, ErrorMessage.ENDPOINT_NOT_FOUND));
 
 		Assertions.assertThrows(ResourceException.class, () -> userController.getProfile(id));
 	}
@@ -79,8 +81,8 @@ class UserControllerTest {
 		Long id = 8L;
 		UserDto dto = sampleUserDto();
 
-		org.mockito.Mockito.doThrow(new ResourceException(ErrorState.FORBIDDEN)).when(mockUserService)
-				.updateUser(org.mockito.Mockito.eq(id), org.mockito.Mockito.any(UserDto.class));
+		org.mockito.Mockito.doThrow(new ResourceException(HttpStatus.FORBIDDEN, ErrorMessage.PROFILE_UPDATE_FORBIDDEN))
+				.when(mockUserService).updateUser(org.mockito.Mockito.eq(id), org.mockito.Mockito.any(UserDto.class));
 
 		Assertions.assertThrows(ResourceException.class, () -> userController.updateProfile(id, dto));
 	}
@@ -106,8 +108,8 @@ class UserControllerTest {
 		Long id = 1234L;
 		UserDto dto = sampleUserDto();
 
-		org.mockito.Mockito.doThrow(new ResourceException(ErrorState.NOT_FOUND)).when(mockUserService)
-				.updateUser(org.mockito.Mockito.eq(id), org.mockito.Mockito.any(UserDto.class));
+		org.mockito.Mockito.doThrow(new ResourceException(HttpStatus.BAD_REQUEST, ErrorMessage.ENDPOINT_NOT_FOUND))
+				.when(mockUserService).updateUser(org.mockito.Mockito.eq(id), org.mockito.Mockito.any(UserDto.class));
 
 		Assertions.assertThrows(ResourceException.class, () -> userController.updateProfile(id, dto));
 	}

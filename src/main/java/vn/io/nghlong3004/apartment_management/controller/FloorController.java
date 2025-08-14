@@ -1,7 +1,6 @@
 package vn.io.nghlong3004.apartment_management.controller;
 
 import org.springframework.http.HttpStatus;
-import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -19,21 +18,22 @@ import vn.io.nghlong3004.apartment_management.service.FloorService;
 @RestController
 @RequestMapping("/api/v1/floor")
 @RequiredArgsConstructor
-@Validated
 public class FloorController {
 
 	private final FloorService floorService;
 
-	@PostMapping(value = "/{id}", consumes = "application/json")
+	@PostMapping(value = "/{floorId}", consumes = "application/json")
 	@ResponseStatus(code = HttpStatus.CREATED)
-	public void joinRoom(@Min(1) @PathVariable("id") Long id, @RequestBody @Valid JoinRoomRequest joinRoomRequest) {
-		floorService.createJoinRequest(id, joinRoomRequest.roomId());
+	public void joinRoom(@Min(1) @PathVariable("floorId") Long floorId,
+			@RequestBody @Valid JoinRoomRequest joinRoomRequest) {
+		floorService.createJoinRequest(floorId, joinRoomRequest.roomId());
 	}
 
-	@PutMapping(value = "/{id}", consumes = "application/json")
+	@PutMapping(value = "/{floorId}", consumes = "application/json")
 	@ResponseStatus(code = HttpStatus.CREATED)
-	public void moveRoom(@Min(1) @PathVariable("id") Long id, @RequestBody @Valid JoinRoomRequest joinRoomRequest) {
-		floorService.createMoveRequest(id, joinRoomRequest.roomId());
+	public void moveRoom(@Min(1) @PathVariable("floorId") Long floorId,
+			@RequestBody @Valid JoinRoomRequest joinRoomRequest) {
+		floorService.createMoveRequest(floorId, joinRoomRequest.roomId());
 	}
 
 }

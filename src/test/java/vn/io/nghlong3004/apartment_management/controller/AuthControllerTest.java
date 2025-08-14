@@ -15,10 +15,11 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
 
-import vn.io.nghlong3004.apartment_management.exception.ErrorState;
+import vn.io.nghlong3004.apartment_management.constant.ErrorMessage;
 import vn.io.nghlong3004.apartment_management.exception.ResourceException;
 import vn.io.nghlong3004.apartment_management.model.dto.LoginRequest;
 import vn.io.nghlong3004.apartment_management.model.dto.LoginResponse;
@@ -115,7 +116,7 @@ class AuthControllerTest {
 		String invalidRefreshToken = "refresh-" + UUID.randomUUID();
 
 		when(mockUserService.refresh(invalidRefreshToken))
-				.thenThrow(new ResourceException(ErrorState.ERROR_REFRESH_TOKEN));
+				.thenThrow(new ResourceException(HttpStatus.BAD_REQUEST, ErrorMessage.INVALID_REFRESH_TOKEN));
 
 		Assertions.assertThrows(ResourceException.class, () -> authController.refreshToken(invalidRefreshToken));
 	}
