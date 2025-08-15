@@ -21,6 +21,11 @@ public final class ErrorMessage {
 	public static final String ROOM_MOVE_NOT_ALLOWED = "Cannot move to a reserved room.";
 	public static final String MOVE_TO_OWN_ROOM_NOT_ALLOWED = "Cannot move to your own room.";
 
+	// Floor
+	public static final String FLOOR_NOT_FOUND = "Floor not found.";
+	public static final String UNABLE_TO_CREATE_FLOOR = "Unale to create floor.";
+	public static final String FLOOR_STILL_HAS_ROOMS = "Floor still has rooms.";
+
 	// Request
 	public static final String PENDING_REQUEST_EXISTS = "You already have a pending request.";
 	public static final String USER_PENDING_REQUEST = "You already has a pending request.";

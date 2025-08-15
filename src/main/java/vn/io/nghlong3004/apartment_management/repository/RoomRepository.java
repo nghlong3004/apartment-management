@@ -1,5 +1,6 @@
 package vn.io.nghlong3004.apartment_management.repository;
 
+import java.util.List;
 import java.util.Optional;
 
 import org.apache.ibatis.annotations.Mapper;
@@ -36,5 +37,12 @@ public interface RoomRepository {
 			WHERE  id = #{id}
 			""")
 	public void updateRoom(Room room);
+
+	@Select("""
+			SELECT *
+			 FROM  room
+			 WHERE floor_id = #{floorId}
+			""")
+	public List<Room> findAllRoomsByFloorId(Long floorId);
 
 }

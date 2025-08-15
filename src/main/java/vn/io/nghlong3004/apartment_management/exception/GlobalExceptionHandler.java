@@ -5,6 +5,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.HttpMediaTypeNotSupportedException;
+import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.MissingRequestCookieException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -57,6 +58,17 @@ public class GlobalExceptionHandler {
 		return handleException(HttpStatus.UNSUPPORTED_MEDIA_TYPE, ErrorMessage.UNSUPPORTED_MEDIA_TYPE);
 	}
 
+	@ExceptionHandler(HandlerMethodValidationException.class)
+	public ResponseEntity<ErrorResponse> handleHandlerMethodValidationException(
+			HandlerMethodValidationException exception) {
+		String msg = exception.getParameterValidationResults().stream().flatMap(r -> r.getResolvableErrors().stream())
+				.map(err -> err.getDefaultMessage()).distinct().reduce((a, b) -> a + ", " + b)
+				.orElse("Validation failure");
+
+		log.warn("Handler method validation failed: {}", msg);
+		return handleException(HttpStatus.BAD_REQUEST, msg);
+	}
+
 	@ExceptionHandler(MethodArgumentTypeMismatchException.class)
 	public ResponseEntity<ErrorResponse> handleMethodArgumentTypeMismatchException(
 			MethodArgumentTypeMismatchException exception) {
@@ -80,12 +92,12 @@ public class GlobalExceptionHandler {
 		return handleException(HttpStatus.NOT_FOUND, ErrorMessage.ENDPOINT_NOT_FOUND);
 	}
 
-	@ExceptionHandler(HandlerMethodValidationException.class)
-	public ResponseEntity<ErrorResponse> handleHandlerMethodValidationException(
-			HandlerMethodValidationException exception) {
-		log.warn("Validation failed for request: {}", exception.getMessage());
+	@ExceptionHandler(HttpRequestMethodNotSupportedException.class)
+	public ResponseEntity<ErrorResponse> handleHttpRequestMethodNotSupportedException(
+			HttpRequestMethodNotSupportedException exception) {
+		log.warn("Message='{}'", exception.getMessage());
 
-		return handleException(HttpStatus.BAD_REQUEST, ErrorMessage.ENDPOINT_NOT_FOUND);
+		return handleException(HttpStatus.METHOD_NOT_ALLOWED, exception.getMessage());
 	}
 
 	@ExceptionHandler(HttpMessageNotReadableException.class)

@@ -1,5 +1,7 @@
 package vn.io.nghlong3004.apartment_management.service.impl;
 
+import java.util.List;
+
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
@@ -7,10 +9,15 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import vn.io.nghlong3004.apartment_management.constant.ErrorMessage;
 import vn.io.nghlong3004.apartment_management.exception.ResourceException;
+import vn.io.nghlong3004.apartment_management.model.Floor;
 import vn.io.nghlong3004.apartment_management.model.RequestStatus;
 import vn.io.nghlong3004.apartment_management.model.RequestType;
 import vn.io.nghlong3004.apartment_management.model.Room;
 import vn.io.nghlong3004.apartment_management.model.RoomStatus;
+import vn.io.nghlong3004.apartment_management.model.dto.FloorCreateRequest;
+import vn.io.nghlong3004.apartment_management.model.dto.FloorResponse;
+import vn.io.nghlong3004.apartment_management.model.dto.FloorUpdateRequest;
+import vn.io.nghlong3004.apartment_management.model.dto.RoomResponse;
 import vn.io.nghlong3004.apartment_management.repository.FloorRepository;
 import vn.io.nghlong3004.apartment_management.service.FloorService;
 import vn.io.nghlong3004.apartment_management.service.RoomService;
@@ -68,5 +75,71 @@ public class FloorServiceImpl implements FloorService {
 		floorRepository.createRequest(userId, floorId, roomId, RequestType.MOVE, RequestStatus.PENDING);
 		log.info("Move request created: requesterId={}, targetRoomId={}, status={}", userId, roomId,
 				RequestStatus.PENDING);
+	}
+
+	@Override
+	public FloorResponse getFloorWithRooms(Long floorId) {
+		log.info("Retrieving floor details for floorId={}", floorId);
+
+		Floor floor = floorRepository.findById(floorId)
+				.orElseThrow(() -> new ResourceException(HttpStatus.NOT_FOUND, ErrorMessage.FLOOR_NOT_FOUND));
+
+		List<RoomResponse> roomResponses = mapRoomsToRoomResponses(roomService.getAllRooms(floorId));
+
+		return new FloorResponse(floorId,
+				floor.getManagerId() == null ? "Unknown" : String.valueOf(floor.getManagerId()), floor.getName(),
+				floor.getRoomCount(), roomResponses);
+	}
+
+	@Override
+	public void deleteFloor(Long floorId) {
+		log.info("Deleting floor floorId={}", floorId);
+
+		int affected = floorRepository.deleteById(floorId);
+		if (affected == 0) {
+			log.warn("Delete failed: floor not found floorId={}", floorId);
+			throw new ResourceException(HttpStatus.NOT_FOUND, ErrorMessage.FLOOR_NOT_FOUND);
+		}
+
+		log.debug("Floor deleted: floorId={}", floorId);
+	}
+
+	public void updateFloor(Long floorId, FloorUpdateRequest floorUpdateRequest) {
+		log.info("Updating floor with floorId={}", floorId);
+
+		Floor existingFloor = floorRepository.findById(floorId)
+				.orElseThrow(() -> new ResourceException(HttpStatus.NOT_FOUND, ErrorMessage.FLOOR_NOT_FOUND));
+
+		existingFloor.setName(floorUpdateRequest.getName());
+		existingFloor.setManagerId(floorUpdateRequest.getManagerId());
+		existingFloor.setRoomCount(floorUpdateRequest.getRoomCount());
+
+		floorRepository.updateFloor(existingFloor);
+
+		log.debug("Floor updated successfully: floorId={}", floorId);
+
+	}
+
+	@Override
+	public void addFloor(FloorCreateRequest floorCreateRequest) {
+		log.info("Creating floor name = {}", floorCreateRequest.getName());
+
+		Floor floor = Floor.builder().name(floorCreateRequest.getName())
+				.roomCount(floorCreateRequest.getRoomCount() == null ? 0 : floorCreateRequest.getRoomCount()).build();
+
+		floorRepository.insert(floor);
+
+		log.debug("Floor created successfully id={}", floor.getId());
+	}
+
+	private List<RoomResponse> mapRoomsToRoomResponses(List<Room> rooms) {
+		if (rooms == null || rooms.isEmpty()) {
+			return List.of();
+		}
+		return rooms.stream().map(this::mapRoomToRoomResponse).toList();
+	}
+
+	private RoomResponse mapRoomToRoomResponse(Room room) {
+		return new RoomResponse(room.getId(), room.getFloorId(), room.getUserId(), room.getName(), room.getStatus());
 	}
 }

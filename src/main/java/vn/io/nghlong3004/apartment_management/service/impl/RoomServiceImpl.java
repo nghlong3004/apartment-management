@@ -1,5 +1,7 @@
 package vn.io.nghlong3004.apartment_management.service.impl;
 
+import java.util.List;
+
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
 
@@ -36,5 +38,11 @@ public class RoomServiceImpl implements RoomService {
 		room.setUserId(userId);
 		roomRepository.updateRoom(room);
 		log.info("Room reserved: roomId={}, newStatus={}, userId={}", room.getId(), room.getStatus(), userId);
+	}
+
+	@Override
+	public List<Room> getAllRooms(Long floorId) {
+		log.info("Fetching all rooms for floorId={}", floorId);
+		return roomRepository.findAllRoomsByFloorId(floorId);
 	}
 }
