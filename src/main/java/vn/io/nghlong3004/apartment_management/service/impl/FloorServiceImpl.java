@@ -41,7 +41,7 @@ public class FloorServiceImpl implements FloorService {
 
 		floorValidator.ensureNoPendingRequestForSelf(userId, RequestType.JOIN);
 
-		Room room = roomService.getRoomOrThrow(floorId, roomId);
+		Room room = roomService.getRoom(floorId, roomId);
 		floorValidator.ensureRoomAvailable(room.getStatus());
 
 		floorRepository.createRequest(userId, floorId, roomId, RequestType.JOIN, RequestStatus.PENDING);
@@ -61,7 +61,7 @@ public class FloorServiceImpl implements FloorService {
 
 		floorValidator.ensureNoPendingRequestForSelf(userId, RequestType.MOVE);
 
-		Room room = roomService.getRoomOrThrow(floorId, roomId);
+		Room room = roomService.getRoom(floorId, roomId);
 
 		if (userId.equals(room.getUserId())) {
 			log.warn("Move request rejected: user tries to move into own room. userId={}, roomId={}", userId, roomId);
@@ -140,6 +140,8 @@ public class FloorServiceImpl implements FloorService {
 	}
 
 	private RoomResponse mapRoomToRoomResponse(Room room) {
-		return new RoomResponse(room.getId(), room.getFloorId(), room.getUserId(), room.getName(), room.getStatus());
+		return new RoomResponse(room.getId(), room.getFloorId(),
+				room.getUserId() == null ? "Unknown" : String.valueOf(room.getUserId()), room.getName(),
+				room.getStatus());
 	}
 }

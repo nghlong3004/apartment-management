@@ -3,6 +3,8 @@ package vn.io.nghlong3004.apartment_management.repository;
 import java.util.List;
 import java.util.Optional;
 
+import org.apache.ibatis.annotations.Delete;
+import org.apache.ibatis.annotations.Insert;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Select;
 import org.apache.ibatis.annotations.Update;
@@ -44,5 +46,41 @@ public interface RoomRepository {
 			 WHERE floor_id = #{floorId}
 			""")
 	public List<Room> findAllRoomsByFloorId(Long floorId);
+
+	@Insert("""
+			    INSERT INTO room (floor_id, user_id, name, status, created, updated)
+			    VALUES (#{floorId}, #{userId}, #{name},
+			            #{status}::room_status, NOW(), NOW())
+			""")
+	void insert(Room room);
+
+	@Select("""
+			    SELECT 1
+			    FROM floor
+			    WHERE id = #{floorId}
+			""")
+	Optional<Boolean> floorExists(Long floorId);
+
+	@Select("""
+			    SELECT 1
+			    FROM room
+			    WHERE floor_id = #{floorId} AND LOWER(name) = LOWER(#{name})
+			""")
+	Optional<Boolean> existsByFloorIdAndName(Long floorId, String name);
+
+	@Select("""
+			    SELECT 1
+			      FROM room
+			     WHERE floor_id = #{floorId}
+			       AND LOWER(name) = LOWER(#{name})
+			       AND id <> #{roomId}
+			""")
+	Optional<Boolean> existsByFloorIdAndNameExcludingId(Long floorId, String name, Long roomId);
+
+	@Delete("""
+			    DELETE FROM room
+			    WHERE id = #{roomId} AND floor_id = #{floorId}
+			""")
+	void deleteByIdAndFloorId(Long roomId, Long floorId);
 
 }
