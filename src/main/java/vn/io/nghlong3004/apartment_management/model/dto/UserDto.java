@@ -5,6 +5,7 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import lombok.Builder;
 import lombok.Getter;
+import vn.io.nghlong3004.apartment_management.model.User;
 
 @Getter
 @Builder
@@ -20,4 +21,9 @@ public class UserDto {
 	private String lastName;
 	@Size(min = 10, max = 10, message = "Phone number only 10 characters (Only support Vietnamese phone numbers)")
 	private String phoneNumber;
+
+	public static UserDto from(User user) {
+		return UserDto.builder().email(user.getEmail()).firstName(user.getFirstName()).lastName(user.getLastName())
+				.phoneNumber(user.getPhoneNumber()).build();
+	}
 }

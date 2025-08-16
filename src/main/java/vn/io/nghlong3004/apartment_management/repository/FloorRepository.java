@@ -59,7 +59,7 @@ public interface FloorRepository {
 			    DELETE FROM floor
 			    WHERE id = #{floorId}
 			""")
-	int deleteById(Long floorId);
+	void deleteById(Long floorId);
 
 	@Select("""
 			    SELECT COUNT(*)

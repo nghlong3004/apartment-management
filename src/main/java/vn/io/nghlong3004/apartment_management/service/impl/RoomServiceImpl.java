@@ -47,13 +47,17 @@ public class RoomServiceImpl implements RoomService {
 
 		Room room = getRoom(floorId, roomId);
 
-		return mapRoomToRoomResponse(room);
+		return RoomResponse.from(room);
 	}
 
 	@Override
 	public List<Room> getAllRooms(Long floorId) {
 		log.info("Fetching all rooms for floorId={}", floorId);
-		return roomRepository.findAllRoomsByFloorId(floorId);
+		List<Room> rooms = roomRepository.findAllRoomsByFloorId(floorId);
+		if (rooms == null || rooms.isEmpty()) {
+			return List.of();
+		}
+		return rooms;
 	}
 
 	@Override
@@ -64,7 +68,11 @@ public class RoomServiceImpl implements RoomService {
 				.orElseThrow(() -> new ResourceException(HttpStatus.NOT_FOUND, ErrorMessage.FLOOR_NOT_FOUND));
 
 		List<Room> rooms = roomRepository.findAllRoomsByFloorId(floorId);
-		return mapRoomsToRoomResponses(rooms);
+		if (rooms.isEmpty() || rooms == null) {
+			log.info("No room for floorId={}", floorId);
+			return List.of();
+		}
+		return rooms.stream().map(RoomResponse::from).toList();
 	}
 
 	@Override
@@ -116,17 +124,5 @@ public class RoomServiceImpl implements RoomService {
 			throw new ResourceException(HttpStatus.BAD_REQUEST, "Room name already exists in this floor");
 		}
 
-	}
-
-	private List<RoomResponse> mapRoomsToRoomResponses(List<Room> rooms) {
-		if (rooms == null || rooms.isEmpty())
-			return List.of();
-		return rooms.stream().map(this::mapRoomToRoomResponse).toList();
-	}
-
-	private RoomResponse mapRoomToRoomResponse(Room room) {
-		return new RoomResponse(room.getId(), room.getFloorId(),
-				room.getUserId() == null ? "Unknown" : String.valueOf(room.getUserId()), room.getName(),
-				room.getStatus());
 	}
 }

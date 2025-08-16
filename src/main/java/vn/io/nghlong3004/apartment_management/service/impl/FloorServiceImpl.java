@@ -1,7 +1,5 @@
 package vn.io.nghlong3004.apartment_management.service.impl;
 
-import java.util.List;
-
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
@@ -17,7 +15,6 @@ import vn.io.nghlong3004.apartment_management.model.RoomStatus;
 import vn.io.nghlong3004.apartment_management.model.dto.FloorCreateRequest;
 import vn.io.nghlong3004.apartment_management.model.dto.FloorResponse;
 import vn.io.nghlong3004.apartment_management.model.dto.FloorUpdateRequest;
-import vn.io.nghlong3004.apartment_management.model.dto.RoomResponse;
 import vn.io.nghlong3004.apartment_management.repository.FloorRepository;
 import vn.io.nghlong3004.apartment_management.service.FloorService;
 import vn.io.nghlong3004.apartment_management.service.RoomService;
@@ -84,22 +81,14 @@ public class FloorServiceImpl implements FloorService {
 		Floor floor = floorRepository.findById(floorId)
 				.orElseThrow(() -> new ResourceException(HttpStatus.NOT_FOUND, ErrorMessage.FLOOR_NOT_FOUND));
 
-		List<RoomResponse> roomResponses = mapRoomsToRoomResponses(roomService.getAllRooms(floorId));
-
-		return new FloorResponse(floorId,
-				floor.getManagerId() == null ? "Unknown" : String.valueOf(floor.getManagerId()), floor.getName(),
-				floor.getRoomCount(), roomResponses);
+		return FloorResponse.from(floor, roomService.getAllRooms(floorId));
 	}
 
 	@Override
 	public void deleteFloor(Long floorId) {
 		log.info("Deleting floor floorId={}", floorId);
 
-		int affected = floorRepository.deleteById(floorId);
-		if (affected == 0) {
-			log.warn("Delete failed: floor not found floorId={}", floorId);
-			throw new ResourceException(HttpStatus.NOT_FOUND, ErrorMessage.FLOOR_NOT_FOUND);
-		}
+		floorRepository.deleteById(floorId);
 
 		log.debug("Floor deleted: floorId={}", floorId);
 	}
@@ -130,18 +119,5 @@ public class FloorServiceImpl implements FloorService {
 		floorRepository.insert(floor);
 
 		log.debug("Floor created successfully id={}", floor.getId());
-	}
-
-	private List<RoomResponse> mapRoomsToRoomResponses(List<Room> rooms) {
-		if (rooms == null || rooms.isEmpty()) {
-			return List.of();
-		}
-		return rooms.stream().map(this::mapRoomToRoomResponse).toList();
-	}
-
-	private RoomResponse mapRoomToRoomResponse(Room room) {
-		return new RoomResponse(room.getId(), room.getFloorId(),
-				room.getUserId() == null ? "Unknown" : String.valueOf(room.getUserId()), room.getName(),
-				room.getStatus());
 	}
 }

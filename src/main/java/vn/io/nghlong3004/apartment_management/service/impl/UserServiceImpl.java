@@ -116,8 +116,7 @@ public class UserServiceImpl implements UserService {
 				.orElseThrow(() -> new ResourceException(HttpStatus.BAD_REQUEST, ErrorMessage.ID_NOT_FOUND));
 
 		log.info("Get user success id={}", id);
-		return UserDto.builder().email(user.getEmail()).firstName(user.getFirstName()).lastName(user.getLastName())
-				.phoneNumber(user.getPhoneNumber()).build();
+		return UserDto.from(user);
 	}
 
 	private String normalizeEmail(String email) {
