@@ -37,7 +37,7 @@ public class RoomController {
 		roomService.createRoom(floorId, request);
 	}
 
-	@GetMapping(value = "/{floorId}/room", params = "!name")
+	@GetMapping(value = "/{floorId}/room")
 	@ResponseStatus(HttpStatus.OK)
 	public PagedResponse<RoomResponse> listRooms(@PathVariable @Min(1) Long floorId,
 			@RequestParam(defaultValue = "0") @Min(0) int page,
@@ -52,7 +52,7 @@ public class RoomController {
 		return roomService.getRoomResponse(floorId, roomId);
 	}
 
-	@GetMapping(value = "/{floorId}/room", params = "name")
+	@GetMapping(value = "/{floorId}/room")
 	@ResponseStatus(HttpStatus.OK)
 	public RoomResponse getRoomByName(@PathVariable @Min(1) Long floorId,
 			@RequestParam("name") @NotBlank @Size(max = 20, message = "Room name must be at most 20 characters") String roomName) {
@@ -67,7 +67,7 @@ public class RoomController {
 	}
 
 	@DeleteMapping("/{floorId}/room/{roomId}")
-	@ResponseStatus(code = HttpStatus.NO_CONTENT)
+	@ResponseStatus(code = HttpStatus.OK)
 	public void deleteRoom(@PathVariable @Min(1) Long floorId, @PathVariable @Min(1) Long roomId) {
 		roomService.deleteRoom(floorId, roomId);
 	}

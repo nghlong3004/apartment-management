@@ -60,7 +60,7 @@ public class FloorController {
 		return floorService.getFloorByName(name);
 	}
 
-	@GetMapping(params = "!name")
+	@GetMapping
 	@ResponseStatus(HttpStatus.OK)
 	public PagedResponse<FloorSummary> listFloors(@RequestParam(defaultValue = "0") @Min(0) int page,
 			@RequestParam(defaultValue = "20") @Min(1) @Max(100) int size,
@@ -81,7 +81,7 @@ public class FloorController {
 	}
 
 	@DeleteMapping("/{floorId}")
-	@ResponseStatus(code = HttpStatus.NO_CONTENT)
+	@ResponseStatus(code = HttpStatus.OK)
 	public void deleteFloor(@PathVariable @Min(1) Long floorId) {
 		floorService.deleteFloor(floorId);
 	}
