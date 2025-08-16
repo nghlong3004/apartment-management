@@ -42,16 +42,14 @@ public class UserServiceImpl implements UserService {
 	@Override
 	@Transactional
 	public void register(RegisterRequest registerRequest) {
-		log.info("Register start for email={}", registerRequest.getEmail());
+		log.info("Register start for email={}", registerRequest.email());
 
-		registerRequest.setEmail(normalizeEmail(registerRequest.getEmail()));
+		userServiceValidator.ensureEmailNotExists(normalizeEmail(registerRequest.email()));
 
-		userServiceValidator.ensureEmailNotExists(registerRequest.getEmail());
-
-		User user = User.builder().firstName(registerRequest.getFirstName()).lastName(registerRequest.getLastName())
-				.email(registerRequest.getEmail()).phoneNumber(registerRequest.getPhoneNumber())
-				.password(passwordEncoder.encode(registerRequest.getPassword())).role(Role.USER)
-				.status(UserStatus.ACTIVE).floor(null).build();
+		User user = User.builder().firstName(registerRequest.firstName()).lastName(registerRequest.lastName())
+				.email(normalizeEmail(registerRequest.email())).phoneNumber(registerRequest.phoneNumber())
+				.password(passwordEncoder.encode(registerRequest.password())).role(Role.USER).status(UserStatus.ACTIVE)
+				.floor(null).build();
 
 		userRepository.save(user);
 		log.info("Register success for email={}", user.getEmail());
@@ -60,14 +58,14 @@ public class UserServiceImpl implements UserService {
 	@Override
 	@Transactional
 	public Token login(LoginRequest loginRequest) {
-		log.info("Login start for email={}", loginRequest.getEmail());
+		log.info("Login start for email={}", loginRequest.email());
 
-		User user = userRepository.findByEmail(normalizeEmail(loginRequest.getEmail())).orElseThrow(() -> {
-			log.warn("Login failed: email not found {}", loginRequest.getEmail());
+		User user = userRepository.findByEmail(normalizeEmail(loginRequest.email())).orElseThrow(() -> {
+			log.warn("Login failed: email not found {}", loginRequest.email());
 			return new ResourceException(HttpStatus.BAD_REQUEST, ErrorMessageConstant.INVALID_CREDENTIALS);
 		});
 
-		userServiceValidator.validateCredentials(loginRequest.getPassword(), user);
+		userServiceValidator.validateCredentials(loginRequest.password(), user);
 
 		String accessToken = jwtService.generateAccessToken(user.getId(), user.getRole());
 		RefreshToken refreshToken = refreshTokenService.createRefreshToken(user.getId());

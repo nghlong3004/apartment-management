@@ -74,12 +74,11 @@ public class RoomServiceImpl implements RoomService {
 	@Override
 	@Transactional
 	public void createRoom(Long floorId, RoomRequest roomCreateRequest) {
-		log.info("Creating room '{}' in floorId={}", roomCreateRequest.getName(), floorId);
+		log.info("Creating room '{}' in floorId={}", roomCreateRequest.name(), floorId);
 
 		validatorRoom(floorId, roomCreateRequest);
 
-		Room room = Room.builder().floorId(floorId).name(roomCreateRequest.getName()).status(RoomStatus.AVAILABLE)
-				.build();
+		Room room = Room.builder().floorId(floorId).name(roomCreateRequest.name()).status(RoomStatus.AVAILABLE).build();
 
 		roomRepository.insert(room);
 		floorRepository.incrementRoomCount(floorId);
@@ -88,18 +87,18 @@ public class RoomServiceImpl implements RoomService {
 	@Override
 	@Transactional
 	public void updateRoom(Long floorId, Long roomId, RoomRequest req) {
-		log.info("Updating roomId={} in floorId={} (name='{}', userId={}, status={})", roomId, floorId, req.getName(),
-				req.getUserId(), req.getStatus());
+		log.info("Updating roomId={} in floorId={} (name='{}', userId={}, status={})", roomId, floorId, req.name(),
+				req.userId(), req.status());
 
 		roomRepository.findRoomByFloorIdAndRoomId(floorId, roomId)
 				.orElseThrow(() -> new ResourceException(HttpStatus.NOT_FOUND, ErrorMessageConstant.ROOM_NOT_FOUND));
 
-		if (roomRepository.existsByFloorIdAndNameExcludingId(floorId, req.getName(), roomId).orElse(false)) {
+		if (roomRepository.existsByFloorIdAndNameExcludingId(floorId, req.name(), roomId).orElse(false)) {
 			throw new ResourceException(HttpStatus.CONFLICT, ErrorMessageConstant.ROOM_ALREADY_NAME);
 		}
 
-		Room room = Room.builder().id(roomId).floorId(floorId).name(req.getName()).userId(req.getUserId())
-				.status(req.getStatus()).build();
+		Room room = Room.builder().id(roomId).floorId(floorId).name(req.name()).userId(req.userId())
+				.status(req.status()).build();
 		roomRepository.updateRoom(room);
 
 	}
@@ -133,7 +132,7 @@ public class RoomServiceImpl implements RoomService {
 	private void validatorRoom(Long floorId, RoomRequest roomCreateRequest) {
 		floorRepository.floorExists(floorId)
 				.orElseThrow(() -> new ResourceException(HttpStatus.NOT_FOUND, ErrorMessageConstant.FLOOR_NOT_FOUND));
-		if (roomRepository.existsByFloorIdAndName(floorId, roomCreateRequest.getName()).orElse(false)) {
+		if (roomRepository.existsByFloorIdAndName(floorId, roomCreateRequest.name()).orElse(false)) {
 			throw new ResourceException(HttpStatus.BAD_REQUEST, ErrorMessageConstant.ROOM_ALREADY_NAME);
 		}
 

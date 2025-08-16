@@ -43,14 +43,12 @@ class AuthControllerTest {
 	private ArgumentCaptor<LoginRequest> loginRequestCaptor;
 
 	private RegisterRequest createSampleRegisterRequest() {
-		return RegisterRequest.builder().firstName("John").lastName("Doe")
-				.email("john" + UUID.randomUUID() + "@example.com").password("Passw0rd!@#").phoneNumber("0909123456")
-				.build();
+		return new RegisterRequest("John", "Doe", "john" + UUID.randomUUID() + "@example.com", "Passw0rd!@#",
+				"0909123456");
 	}
 
 	private LoginRequest createSampleLoginRequest() {
-		return LoginRequest.builder().email("john" + UUID.randomUUID() + "@example.com").password("Passw0rd!@#")
-				.build();
+		return new LoginRequest("john" + UUID.randomUUID() + "@example.com", "Passw0rd!@#");
 	}
 
 	private Token createSampleToken() {

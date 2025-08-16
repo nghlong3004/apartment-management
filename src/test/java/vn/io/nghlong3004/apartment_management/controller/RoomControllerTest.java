@@ -44,10 +44,7 @@ class RoomControllerTest {
 	private ArgumentCaptor<RoomRequest> roomRequestCaptor;
 
 	private RoomRequest sampleRequest() {
-		RoomRequest r = new RoomRequest();
-		r.setName("R101");
-		r.setUserId(99L);
-		r.setStatus(RoomStatus.RESERVED);
+		RoomRequest r = new RoomRequest("R101", 99L, RoomStatus.RESERVED);
 		return r;
 	}
 

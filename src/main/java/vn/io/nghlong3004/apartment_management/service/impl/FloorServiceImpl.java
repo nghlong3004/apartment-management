@@ -62,7 +62,6 @@ public class FloorServiceImpl implements FloorService {
 		final Long userId = SecurityUtil.getCurrentUserId()
 				.orElseThrow(() -> new ResourceException(HttpStatus.BAD_REQUEST, ErrorMessageConstant.ID_NOT_FOUND));
 		log.info("Create move request: userId={}, floorId={}, roomId={}", userId, floorId, roomId);
-
 		floorValidator.ensureNoPendingRequestForSelf(userId, RequestType.MOVE);
 
 		Room room = roomService.getRoom(floorId, roomId);
@@ -110,8 +109,8 @@ public class FloorServiceImpl implements FloorService {
 		Floor existingFloor = floorRepository.findById(floorId)
 				.orElseThrow(() -> new ResourceException(HttpStatus.NOT_FOUND, ErrorMessageConstant.FLOOR_NOT_FOUND));
 
-		existingFloor.setName(floorUpdateRequest.getName());
-		existingFloor.setManagerId(floorUpdateRequest.getManagerId());
+		existingFloor.setName(floorUpdateRequest.name());
+		existingFloor.setManagerId(floorUpdateRequest.managerId());
 
 		floorRepository.updateFloor(existingFloor);
 
@@ -122,13 +121,13 @@ public class FloorServiceImpl implements FloorService {
 	@Override
 	@Transactional
 	public void addFloor(FloorRequest floorRequest) {
-		log.info("Creating floor name = {}", floorRequest.getName());
+		log.info("Creating floor name = {}", floorRequest.name());
 
-		if (floorRepository.existsByName(floorRequest.getName()).orElse(false)) {
+		if (floorRepository.existsByName(floorRequest.name()).orElse(false)) {
 			throw new ResourceException(HttpStatus.BAD_REQUEST, ErrorMessageConstant.FLOOR_NAME_ALREADY_EXISTS);
 		}
 
-		Floor floor = Floor.builder().name(floorRequest.getName()).roomCount(0).build();
+		Floor floor = Floor.builder().name(floorRequest.name()).roomCount(0).build();
 
 		floorRepository.insert(floor);
 

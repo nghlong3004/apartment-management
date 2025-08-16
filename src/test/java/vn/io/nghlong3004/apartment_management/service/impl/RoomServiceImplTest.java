@@ -53,9 +53,7 @@ class RoomServiceImplTest {
 	}
 
 	private RoomRequest sampleReq(String name, RoomStatus status) {
-		RoomRequest req = new RoomRequest();
-		req.setName(name);
-		req.setStatus(status);
+		RoomRequest req = new RoomRequest(name, null, status);
 		return req;
 	}
 
