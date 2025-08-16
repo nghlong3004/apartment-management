@@ -23,7 +23,7 @@ import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
 import jakarta.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
-import vn.io.nghlong3004.apartment_management.constant.ErrorMessage;
+import vn.io.nghlong3004.apartment_management.constant.ErrorMessageConstant;
 import vn.io.nghlong3004.apartment_management.exception.ResourceException;
 import vn.io.nghlong3004.apartment_management.service.JWTService;
 
@@ -92,12 +92,12 @@ public class JWTServiceImpl implements JWTService {
 		Claims c = parseClaimsOrThrow(token);
 		String sub = c.getSubject();
 		if (sub == null) {
-			throw new ResourceException(HttpStatus.BAD_REQUEST, ErrorMessage.INVALID_ACCESS_TOKEN);
+			throw new ResourceException(HttpStatus.BAD_REQUEST, ErrorMessageConstant.INVALID_ACCESS_TOKEN);
 		}
 		try {
 			return Long.valueOf(sub);
 		} catch (NumberFormatException e) {
-			throw new ResourceException(HttpStatus.BAD_REQUEST, ErrorMessage.INVALID_ACCESS_TOKEN);
+			throw new ResourceException(HttpStatus.BAD_REQUEST, ErrorMessageConstant.INVALID_ACCESS_TOKEN);
 		}
 	}
 

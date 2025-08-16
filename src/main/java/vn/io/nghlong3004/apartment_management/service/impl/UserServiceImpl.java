@@ -5,10 +5,11 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseCookie;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import vn.io.nghlong3004.apartment_management.constant.ErrorMessage;
+import vn.io.nghlong3004.apartment_management.constant.ErrorMessageConstant;
 import vn.io.nghlong3004.apartment_management.exception.ResourceException;
 import vn.io.nghlong3004.apartment_management.model.RefreshToken;
 import vn.io.nghlong3004.apartment_management.model.Role;
@@ -39,32 +40,32 @@ public class UserServiceImpl implements UserService {
 	private final UserServiceValidator userServiceValidator;
 
 	@Override
+	@Transactional
 	public void register(RegisterRequest registerRequest) {
-		log.info("Register start for email={}", registerRequest.getEmail());
+		log.info("Register start for email={}", registerRequest.email());
 
-		registerRequest.setEmail(normalizeEmail(registerRequest.getEmail()));
+		userServiceValidator.ensureEmailNotExists(normalizeEmail(registerRequest.email()));
 
-		userServiceValidator.ensureEmailNotExists(registerRequest.getEmail());
-
-		User user = User.builder().firstName(registerRequest.getFirstName()).lastName(registerRequest.getLastName())
-				.email(registerRequest.getEmail()).phoneNumber(registerRequest.getPhoneNumber())
-				.password(passwordEncoder.encode(registerRequest.getPassword())).role(Role.USER)
-				.status(UserStatus.ACTIVE).floor(null).build();
+		User user = User.builder().firstName(registerRequest.firstName()).lastName(registerRequest.lastName())
+				.email(normalizeEmail(registerRequest.email())).phoneNumber(registerRequest.phoneNumber())
+				.password(passwordEncoder.encode(registerRequest.password())).role(Role.USER).status(UserStatus.ACTIVE)
+				.floor(null).build();
 
 		userRepository.save(user);
 		log.info("Register success for email={}", user.getEmail());
 	}
 
 	@Override
+	@Transactional
 	public Token login(LoginRequest loginRequest) {
-		log.info("Login start for email={}", loginRequest.getEmail());
+		log.info("Login start for email={}", loginRequest.email());
 
-		User user = userRepository.findByEmail(normalizeEmail(loginRequest.getEmail())).orElseThrow(() -> {
-			log.warn("Login failed: email not found {}", loginRequest.getEmail());
-			return new ResourceException(HttpStatus.BAD_REQUEST, ErrorMessage.INVALID_CREDENTIALS);
+		User user = userRepository.findByEmail(normalizeEmail(loginRequest.email())).orElseThrow(() -> {
+			log.warn("Login failed: email not found {}", loginRequest.email());
+			return new ResourceException(HttpStatus.BAD_REQUEST, ErrorMessageConstant.INVALID_CREDENTIALS);
 		});
 
-		userServiceValidator.validateCredentials(loginRequest.getPassword(), user);
+		userServiceValidator.validateCredentials(loginRequest.password(), user);
 
 		String accessToken = jwtService.generateAccessToken(user.getId(), user.getRole());
 		RefreshToken refreshToken = refreshTokenService.createRefreshToken(user.getId());
@@ -74,6 +75,7 @@ public class UserServiceImpl implements UserService {
 	}
 
 	@Override
+	@Transactional
 	public Token refresh(String requestRefreshToken) {
 		log.info("Refresh token start");
 
@@ -81,7 +83,7 @@ public class UserServiceImpl implements UserService {
 
 		User user = userRepository.findById(refreshToken.getUserId()).orElseThrow(() -> {
 			log.error("Refresh token points to non-existing userId={}", refreshToken.getUserId());
-			return new ResourceException(HttpStatus.BAD_REQUEST, ErrorMessage.INVALID_REFRESH_TOKEN);
+			return new ResourceException(HttpStatus.BAD_REQUEST, ErrorMessageConstant.INVALID_REFRESH_TOKEN);
 		});
 
 		String newAccessToken = jwtService.generateAccessToken(user.getId(), user.getRole());
@@ -98,26 +100,27 @@ public class UserServiceImpl implements UserService {
 	}
 
 	@Override
+	@Transactional
 	public void updateUser(Long id, UserDto userDto) {
 		userServiceValidator.ensureCanUpdateUser(id);
 		log.info("Update user start id={}", id);
 		User user = userRepository.findById(id)
-				.orElseThrow(() -> new ResourceException(HttpStatus.NOT_FOUND, ErrorMessage.ID_NOT_FOUND));
+				.orElseThrow(() -> new ResourceException(HttpStatus.NOT_FOUND, ErrorMessageConstant.ID_NOT_FOUND));
 
 		userRepository.update(mapUserDtoToUser(id, userDto, user));
 		log.info("Update user success id={}", id);
 	}
 
 	@Override
+	@Transactional
 	public UserDto getUser(Long id) {
 		log.info("Get user start id={}", id);
 
 		User user = userRepository.findById(id)
-				.orElseThrow(() -> new ResourceException(HttpStatus.BAD_REQUEST, ErrorMessage.ID_NOT_FOUND));
+				.orElseThrow(() -> new ResourceException(HttpStatus.BAD_REQUEST, ErrorMessageConstant.ID_NOT_FOUND));
 
 		log.info("Get user success id={}", id);
-		return UserDto.builder().email(user.getEmail()).firstName(user.getFirstName()).lastName(user.getLastName())
-				.phoneNumber(user.getPhoneNumber()).build();
+		return UserDto.from(user);
 	}
 
 	private String normalizeEmail(String email) {
@@ -131,7 +134,7 @@ public class UserServiceImpl implements UserService {
 			if (!newEmail.equalsIgnoreCase(user.getEmail())) {
 				if (userRepository.existsByEmail(newEmail).orElse(false)) {
 					log.warn("Update user email conflict: id={}, newEmail={}", id, newEmail);
-					throw new ResourceException(HttpStatus.BAD_REQUEST, ErrorMessage.EMAIL_ALREADY_EXISTS);
+					throw new ResourceException(HttpStatus.BAD_REQUEST, ErrorMessageConstant.EMAIL_ALREADY_EXISTS);
 				}
 				String oldEmail = user.getEmail();
 				user.setEmail(newEmail);

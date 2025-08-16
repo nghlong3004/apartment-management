@@ -5,6 +5,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.HttpMediaTypeNotSupportedException;
+import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.MissingRequestCookieException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -15,7 +16,7 @@ import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import jakarta.validation.ConstraintViolationException;
 import lombok.extern.slf4j.Slf4j;
-import vn.io.nghlong3004.apartment_management.constant.ErrorMessage;
+import vn.io.nghlong3004.apartment_management.constant.ErrorMessageConstant;
 import vn.io.nghlong3004.apartment_management.model.dto.ErrorResponse;
 
 @Slf4j
@@ -26,7 +27,7 @@ public class GlobalExceptionHandler {
 	public ResponseEntity<ErrorResponse> handleUnwantedException(Exception exception) {
 		log.error("Unhandled exception: {}", exception);
 
-		return handleException(HttpStatus.INTERNAL_SERVER_ERROR, ErrorMessage.INTERNAL_SERVER_ERROR);
+		return handleException(HttpStatus.INTERNAL_SERVER_ERROR, ErrorMessageConstant.INTERNAL_SERVER_ERROR);
 	}
 
 	@ExceptionHandler(MissingRequestCookieException.class)
@@ -41,7 +42,7 @@ public class GlobalExceptionHandler {
 	public ResponseEntity<ErrorResponse> handleDataIntegrityViolation(DataIntegrityViolationException exception) {
 		log.error("A database integrity violation occurred: ", exception);
 
-		return handleException(HttpStatus.CONFLICT, ErrorMessage.DATA_CONFLICT);
+		return handleException(HttpStatus.CONFLICT, ErrorMessageConstant.DATA_CONFLICT);
 	}
 
 	@ExceptionHandler(HttpMediaTypeNotSupportedException.class)
@@ -54,7 +55,18 @@ public class GlobalExceptionHandler {
 
 		log.warn("Unsupported Content-Type: {}. Supported: {}", unsupported, supported);
 
-		return handleException(HttpStatus.UNSUPPORTED_MEDIA_TYPE, ErrorMessage.UNSUPPORTED_MEDIA_TYPE);
+		return handleException(HttpStatus.UNSUPPORTED_MEDIA_TYPE, ErrorMessageConstant.UNSUPPORTED_MEDIA_TYPE);
+	}
+
+	@ExceptionHandler(HandlerMethodValidationException.class)
+	public ResponseEntity<ErrorResponse> handleHandlerMethodValidationException(
+			HandlerMethodValidationException exception) {
+		String msg = exception.getParameterValidationResults().stream().flatMap(r -> r.getResolvableErrors().stream())
+				.map(err -> err.getDefaultMessage()).distinct().reduce((a, b) -> a + ", " + b)
+				.orElse("Validation failure");
+
+		log.warn("Handler method validation failed: {}", msg);
+		return handleException(HttpStatus.BAD_REQUEST, msg);
 	}
 
 	@ExceptionHandler(MethodArgumentTypeMismatchException.class)
@@ -77,15 +89,13 @@ public class GlobalExceptionHandler {
 		log.warn("A resource exception was handled: Status={}, Message='{}'", exception.getStatusCode(),
 				exception.getMessage());
 
-		return handleException(HttpStatus.NOT_FOUND, ErrorMessage.ENDPOINT_NOT_FOUND);
+		return handleException(HttpStatus.NOT_FOUND, ErrorMessageConstant.ENDPOINT_NOT_FOUND);
 	}
 
-	@ExceptionHandler(HandlerMethodValidationException.class)
-	public ResponseEntity<ErrorResponse> handleHandlerMethodValidationException(
-			HandlerMethodValidationException exception) {
-		log.warn("Validation failed for request: {}", exception.getMessage());
-
-		return handleException(HttpStatus.BAD_REQUEST, ErrorMessage.ENDPOINT_NOT_FOUND);
+	@ExceptionHandler(HttpRequestMethodNotSupportedException.class)
+	public ResponseEntity<ErrorResponse> handleHttpRequestMethodNotSupportedException(
+			HttpRequestMethodNotSupportedException exception) {
+		return handleException(HttpStatus.METHOD_NOT_ALLOWED, exception.getMessage());
 	}
 
 	@ExceptionHandler(HttpMessageNotReadableException.class)
@@ -101,7 +111,7 @@ public class GlobalExceptionHandler {
 			ConstraintViolationException exception) {
 		log.warn("Constraint Violation Exception: {}", exception.getMessage());
 
-		return handleException(HttpStatus.BAD_REQUEST, ErrorMessage.ENDPOINT_NOT_FOUND);
+		return handleException(HttpStatus.BAD_REQUEST, ErrorMessageConstant.ENDPOINT_NOT_FOUND);
 	}
 
 	@ExceptionHandler(MethodArgumentNotValidException.class)
@@ -120,8 +130,8 @@ public class GlobalExceptionHandler {
 	private String generateMessage(MethodArgumentNotValidException exception) {
 		StringBuilder message = new StringBuilder();
 		exception.getBindingResult().getAllErrors().forEach((error) -> {
-			String errorMessage = error.getDefaultMessage();
-			message.append(errorMessage).append(", ");
+			String ErrorMessageConstant = error.getDefaultMessage();
+			message.append(ErrorMessageConstant).append(", ");
 		});
 
 		if (message.length() > 0) {

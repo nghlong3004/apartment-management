@@ -20,7 +20,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import vn.io.nghlong3004.apartment_management.constant.ErrorMessage;
+import vn.io.nghlong3004.apartment_management.constant.ErrorMessageConstant;
 import vn.io.nghlong3004.apartment_management.service.JWTService;
 import vn.io.nghlong3004.apartment_management.service.impl.UserDetailsServiceImpl;
 
@@ -56,12 +56,12 @@ public class JWTAuthenticationFilter extends OncePerRequestFilter {
 			jwtService.validateOrThrow(token);
 		} catch (ExpiredJwtException e) {
 			authenticationEntryPoint.commence(request, response,
-					new AuthenticationException(ErrorMessage.ACCESS_TOKEN_EXPIRED) {
+					new AuthenticationException(ErrorMessageConstant.ACCESS_TOKEN_EXPIRED) {
 					});
 			return;
 		} catch (JwtException e) {
 			authenticationEntryPoint.commence(request, response,
-					new AuthenticationException(ErrorMessage.INVALID_ACCESS_TOKEN) {
+					new AuthenticationException(ErrorMessageConstant.INVALID_ACCESS_TOKEN) {
 					});
 			return;
 		}

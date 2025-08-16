@@ -18,7 +18,7 @@ import org.mockito.MockedStatic;
 import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import vn.io.nghlong3004.apartment_management.constant.ErrorMessage;
+import vn.io.nghlong3004.apartment_management.constant.ErrorMessageConstant;
 import vn.io.nghlong3004.apartment_management.exception.ResourceException;
 import vn.io.nghlong3004.apartment_management.model.RequestStatus;
 import vn.io.nghlong3004.apartment_management.model.RequestType;
@@ -50,7 +50,7 @@ class FloorServiceImplTest {
 
 			ResourceException ex = org.junit.jupiter.api.Assertions.assertThrows(ResourceException.class,
 					() -> floorService.createJoinRequest(10L, 77L));
-			Assertions.assertThat(ex.getMessage()).isEqualTo(ErrorMessage.ID_NOT_FOUND);
+			Assertions.assertThat(ex.getMessage()).isEqualTo(ErrorMessageConstant.ID_NOT_FOUND);
 
 			verify(floorRepository, never()).createRequest(any(), any(), any(), any(), any());
 			verify(roomService, never()).reserveRoom(any(Room.class), any());
@@ -68,14 +68,14 @@ class FloorServiceImplTest {
 			util.when(SecurityUtil::getCurrentUserId).thenReturn(Optional.of(userId));
 
 			Room room = sampleRoom(roomId, floorId, null, "R-9", RoomStatus.AVAILABLE);
-			when(roomService.getRoomOrThrow(floorId, roomId)).thenReturn(room);
+			when(roomService.getRoom(floorId, roomId)).thenReturn(room);
 			Mockito.doNothing().when(floorValidator).ensureNoPendingRequestForSelf(userId, RequestType.JOIN);
 			Mockito.doNothing().when(floorValidator).ensureRoomAvailable(RoomStatus.AVAILABLE);
 
 			floorService.createJoinRequest(floorId, roomId);
 
 			verify(floorValidator).ensureNoPendingRequestForSelf(userId, RequestType.JOIN);
-			verify(roomService).getRoomOrThrow(floorId, roomId);
+			verify(roomService).getRoom(floorId, roomId);
 			verify(floorValidator).ensureRoomAvailable(RoomStatus.AVAILABLE);
 			verify(floorRepository).createRequest(userId, floorId, roomId, RequestType.JOIN, RequestStatus.PENDING);
 			verify(roomService).reserveRoom(room, userId);
@@ -90,14 +90,14 @@ class FloorServiceImplTest {
 			util.when(SecurityUtil::getCurrentUserId).thenReturn(Optional.of(userId));
 
 			Mockito.doThrow(new ResourceException(org.springframework.http.HttpStatus.BAD_REQUEST,
-					ErrorMessage.PENDING_REQUEST_EXISTS)).when(floorValidator)
+					ErrorMessageConstant.PENDING_REQUEST_EXISTS)).when(floorValidator)
 					.ensureNoPendingRequestForSelf(userId, RequestType.JOIN);
 
 			ResourceException ex = org.junit.jupiter.api.Assertions.assertThrows(ResourceException.class,
 					() -> floorService.createJoinRequest(2L, 3L));
-			Assertions.assertThat(ex.getMessage()).isEqualTo(ErrorMessage.PENDING_REQUEST_EXISTS);
+			Assertions.assertThat(ex.getMessage()).isEqualTo(ErrorMessageConstant.PENDING_REQUEST_EXISTS);
 
-			verify(roomService, never()).getRoomOrThrow(any(), any());
+			verify(roomService, never()).getRoom(any(), any());
 			verify(floorRepository, never()).createRequest(any(), any(), any(), any(), any());
 			verify(roomService, never()).reserveRoom(any(Room.class), any());
 		}
@@ -115,13 +115,13 @@ class FloorServiceImplTest {
 			Mockito.doNothing().when(floorValidator).ensureNoPendingRequestForSelf(userId, RequestType.JOIN);
 
 			Room room = sampleRoom(roomId, floorId, null, "R-8", RoomStatus.RESERVED);
-			when(roomService.getRoomOrThrow(floorId, roomId)).thenReturn(room);
+			when(roomService.getRoom(floorId, roomId)).thenReturn(room);
 			Mockito.doThrow(new ResourceException(org.springframework.http.HttpStatus.BAD_REQUEST,
-					ErrorMessage.ROOM_ALREADY_RESERVED)).when(floorValidator).ensureRoomAvailable(RoomStatus.RESERVED);
+					ErrorMessageConstant.ROOM_ALREADY_RESERVED)).when(floorValidator).ensureRoomAvailable(RoomStatus.RESERVED);
 
 			ResourceException ex = org.junit.jupiter.api.Assertions.assertThrows(ResourceException.class,
 					() -> floorService.createJoinRequest(floorId, roomId));
-			Assertions.assertThat(ex.getMessage()).isEqualTo(ErrorMessage.ROOM_ALREADY_RESERVED);
+			Assertions.assertThat(ex.getMessage()).isEqualTo(ErrorMessageConstant.ROOM_ALREADY_RESERVED);
 
 			verify(floorRepository, never()).createRequest(any(), any(), any(), any(), any());
 			verify(roomService, never()).reserveRoom(any(Room.class), any());
@@ -136,7 +136,7 @@ class FloorServiceImplTest {
 
 			ResourceException ex = org.junit.jupiter.api.Assertions.assertThrows(ResourceException.class,
 					() -> floorService.createMoveRequest(10L, 77L));
-			Assertions.assertThat(ex.getMessage()).isEqualTo(ErrorMessage.ID_NOT_FOUND);
+			Assertions.assertThat(ex.getMessage()).isEqualTo(ErrorMessageConstant.ID_NOT_FOUND);
 
 			verify(floorRepository, never()).createRequest(any(), any(), any(), any(), any());
 		}
@@ -154,11 +154,11 @@ class FloorServiceImplTest {
 			Mockito.doNothing().when(floorValidator).ensureNoPendingRequestForSelf(userId, RequestType.MOVE);
 
 			Room room = sampleRoom(roomId, floorId, userId, "SELF", RoomStatus.AVAILABLE);
-			when(roomService.getRoomOrThrow(floorId, roomId)).thenReturn(room);
+			when(roomService.getRoom(floorId, roomId)).thenReturn(room);
 
 			ResourceException ex = org.junit.jupiter.api.Assertions.assertThrows(ResourceException.class,
 					() -> floorService.createMoveRequest(floorId, roomId));
-			Assertions.assertThat(ex.getMessage()).isEqualTo(ErrorMessage.MOVE_TO_OWN_ROOM_NOT_ALLOWED);
+			Assertions.assertThat(ex.getMessage()).isEqualTo(ErrorMessageConstant.MOVE_TO_OWN_ROOM_NOT_ALLOWED);
 
 			verify(floorRepository, never()).createRequest(any(), any(), any(), any(), any());
 		}
@@ -176,14 +176,14 @@ class FloorServiceImplTest {
 			Mockito.doNothing().when(floorValidator).ensureNoPendingRequestForSelf(userId, RequestType.MOVE);
 
 			Room room = sampleRoom(roomId, floorId, 999L, "TARGET", RoomStatus.RESERVED);
-			when(roomService.getRoomOrThrow(floorId, roomId)).thenReturn(room);
+			when(roomService.getRoom(floorId, roomId)).thenReturn(room);
 
 			Mockito.doThrow(new ResourceException(org.springframework.http.HttpStatus.BAD_REQUEST,
-					ErrorMessage.ROOM_MOVE_NOT_ALLOWED)).when(floorValidator).ensureRoomMovable(RoomStatus.RESERVED);
+					ErrorMessageConstant.ROOM_MOVE_NOT_ALLOWED)).when(floorValidator).ensureRoomMovable(RoomStatus.RESERVED);
 
 			ResourceException ex = org.junit.jupiter.api.Assertions.assertThrows(ResourceException.class,
 					() -> floorService.createMoveRequest(floorId, roomId));
-			Assertions.assertThat(ex.getMessage()).isEqualTo(ErrorMessage.ROOM_MOVE_NOT_ALLOWED);
+			Assertions.assertThat(ex.getMessage()).isEqualTo(ErrorMessageConstant.ROOM_MOVE_NOT_ALLOWED);
 
 			verify(floorRepository, never()).createRequest(any(), any(), any(), any(), any());
 		}
@@ -202,16 +202,16 @@ class FloorServiceImplTest {
 			Mockito.doNothing().when(floorValidator).ensureNoPendingRequestForSelf(userId, RequestType.MOVE);
 
 			Room room = sampleRoom(roomId, floorId, currentOccupant, "R-55", RoomStatus.AVAILABLE);
-			when(roomService.getRoomOrThrow(floorId, roomId)).thenReturn(room);
+			when(roomService.getRoom(floorId, roomId)).thenReturn(room);
 			Mockito.doNothing().when(floorValidator).ensureRoomMovable(RoomStatus.AVAILABLE);
 
 			Mockito.doThrow(new ResourceException(org.springframework.http.HttpStatus.BAD_REQUEST,
-					ErrorMessage.PERSON_PENDING_REQUEST)).when(floorValidator)
+					ErrorMessageConstant.PERSON_PENDING_REQUEST)).when(floorValidator)
 					.ensureNoPendingRequestForOther(currentOccupant, RequestType.MOVE);
 
 			ResourceException ex = org.junit.jupiter.api.Assertions.assertThrows(ResourceException.class,
 					() -> floorService.createMoveRequest(floorId, roomId));
-			Assertions.assertThat(ex.getMessage()).isEqualTo(ErrorMessage.PERSON_PENDING_REQUEST);
+			Assertions.assertThat(ex.getMessage()).isEqualTo(ErrorMessageConstant.PERSON_PENDING_REQUEST);
 
 			verify(floorRepository, never()).createRequest(any(), any(), any(), any(), any());
 		}
@@ -230,7 +230,7 @@ class FloorServiceImplTest {
 			Mockito.doNothing().when(floorValidator).ensureNoPendingRequestForSelf(userId, RequestType.MOVE);
 
 			Room room = sampleRoom(roomId, floorId, currentOccupant, "R-66", RoomStatus.AVAILABLE);
-			when(roomService.getRoomOrThrow(floorId, roomId)).thenReturn(room);
+			when(roomService.getRoom(floorId, roomId)).thenReturn(room);
 
 			Mockito.doNothing().when(floorValidator).ensureRoomMovable(RoomStatus.AVAILABLE);
 			Mockito.doNothing().when(floorValidator).ensureNoPendingRequestForOther(currentOccupant, RequestType.MOVE);

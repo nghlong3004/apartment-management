@@ -7,10 +7,11 @@ import java.util.UUID;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import vn.io.nghlong3004.apartment_management.constant.ErrorMessage;
+import vn.io.nghlong3004.apartment_management.constant.ErrorMessageConstant;
 import vn.io.nghlong3004.apartment_management.exception.ResourceException;
 import vn.io.nghlong3004.apartment_management.model.RefreshToken;
 import vn.io.nghlong3004.apartment_management.repository.RefreshTokenRepository;
@@ -27,6 +28,7 @@ public class RefreshTokenServiceImpl implements RefreshTokenService {
 	private final RefreshTokenRepository refreshTokenRepository;
 
 	@Override
+	@Transactional(readOnly = true)
 	public Optional<RefreshToken> findByToken(String token) {
 		log.debug("Attempting to find refresh token in the database.");
 		Optional<RefreshToken> tokenOptional = refreshTokenRepository.findByToken(token);
@@ -39,6 +41,7 @@ public class RefreshTokenServiceImpl implements RefreshTokenService {
 	}
 
 	@Override
+	@Transactional
 	public RefreshToken createRefreshToken(Long userId) {
 		log.info("Request to create a new refresh token for user ID: {}", userId);
 
@@ -56,13 +59,14 @@ public class RefreshTokenServiceImpl implements RefreshTokenService {
 	}
 
 	@Override
+	@Transactional
 	public void verifyExpiration(RefreshToken token) {
 		log.debug("Verifying expiration for the refresh token of user ID: {}", token.getUserId());
 
 		if (token.getExpiryDate().isBefore(Instant.now())) {
 			log.warn("Refresh token for user ID: {} has expired. Deleting it from the database.", token.getUserId());
 			refreshTokenRepository.deleteByUserId(token.getUserId());
-			throw new ResourceException(HttpStatus.BAD_REQUEST, ErrorMessage.REFRESH_TOKEN_EXPIRED);
+			throw new ResourceException(HttpStatus.BAD_REQUEST, ErrorMessageConstant.REFRESH_TOKEN_EXPIRED);
 		}
 
 		log.debug("Refresh token for user ID: {} is still valid.", token.getUserId());

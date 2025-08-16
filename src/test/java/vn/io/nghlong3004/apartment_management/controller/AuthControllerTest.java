@@ -19,7 +19,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
 
-import vn.io.nghlong3004.apartment_management.constant.ErrorMessage;
+import vn.io.nghlong3004.apartment_management.constant.ErrorMessageConstant;
 import vn.io.nghlong3004.apartment_management.exception.ResourceException;
 import vn.io.nghlong3004.apartment_management.model.dto.LoginRequest;
 import vn.io.nghlong3004.apartment_management.model.dto.LoginResponse;
@@ -43,14 +43,12 @@ class AuthControllerTest {
 	private ArgumentCaptor<LoginRequest> loginRequestCaptor;
 
 	private RegisterRequest createSampleRegisterRequest() {
-		return RegisterRequest.builder().firstName("John").lastName("Doe")
-				.email("john" + UUID.randomUUID() + "@example.com").password("Passw0rd!@#").phoneNumber("0909123456")
-				.build();
+		return new RegisterRequest("John", "Doe", "john" + UUID.randomUUID() + "@example.com", "Passw0rd!@#",
+				"0909123456");
 	}
 
 	private LoginRequest createSampleLoginRequest() {
-		return LoginRequest.builder().email("john" + UUID.randomUUID() + "@example.com").password("Passw0rd!@#")
-				.build();
+		return new LoginRequest("john" + UUID.randomUUID() + "@example.com", "Passw0rd!@#");
 	}
 
 	private Token createSampleToken() {
@@ -116,7 +114,7 @@ class AuthControllerTest {
 		String invalidRefreshToken = "refresh-" + UUID.randomUUID();
 
 		when(mockUserService.refresh(invalidRefreshToken))
-				.thenThrow(new ResourceException(HttpStatus.BAD_REQUEST, ErrorMessage.INVALID_REFRESH_TOKEN));
+				.thenThrow(new ResourceException(HttpStatus.BAD_REQUEST, ErrorMessageConstant.INVALID_REFRESH_TOKEN));
 
 		Assertions.assertThrows(ResourceException.class, () -> authController.refreshToken(invalidRefreshToken));
 	}

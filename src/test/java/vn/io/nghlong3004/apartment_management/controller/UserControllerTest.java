@@ -16,7 +16,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.HttpStatus;
 
-import vn.io.nghlong3004.apartment_management.constant.ErrorMessage;
+import vn.io.nghlong3004.apartment_management.constant.ErrorMessageConstant;
 import vn.io.nghlong3004.apartment_management.exception.ResourceException;
 import vn.io.nghlong3004.apartment_management.model.dto.UserDto;
 import vn.io.nghlong3004.apartment_management.service.UserService;
@@ -57,7 +57,7 @@ class UserControllerTest {
 	void getProfile_ShouldThrowWhenNotFound() {
 		Long id = 999L;
 		when(mockUserService.getUser(id))
-				.thenThrow(new ResourceException(HttpStatus.BAD_REQUEST, ErrorMessage.ENDPOINT_NOT_FOUND));
+				.thenThrow(new ResourceException(HttpStatus.BAD_REQUEST, ErrorMessageConstant.ENDPOINT_NOT_FOUND));
 
 		Assertions.assertThrows(ResourceException.class, () -> userController.getProfile(id));
 	}
@@ -81,7 +81,7 @@ class UserControllerTest {
 		Long id = 8L;
 		UserDto dto = sampleUserDto();
 
-		org.mockito.Mockito.doThrow(new ResourceException(HttpStatus.FORBIDDEN, ErrorMessage.PROFILE_UPDATE_FORBIDDEN))
+		org.mockito.Mockito.doThrow(new ResourceException(HttpStatus.FORBIDDEN, ErrorMessageConstant.PROFILE_UPDATE_FORBIDDEN))
 				.when(mockUserService).updateUser(org.mockito.Mockito.eq(id), org.mockito.Mockito.any(UserDto.class));
 
 		Assertions.assertThrows(ResourceException.class, () -> userController.updateProfile(id, dto));
@@ -108,7 +108,7 @@ class UserControllerTest {
 		Long id = 1234L;
 		UserDto dto = sampleUserDto();
 
-		org.mockito.Mockito.doThrow(new ResourceException(HttpStatus.BAD_REQUEST, ErrorMessage.ENDPOINT_NOT_FOUND))
+		org.mockito.Mockito.doThrow(new ResourceException(HttpStatus.BAD_REQUEST, ErrorMessageConstant.ENDPOINT_NOT_FOUND))
 				.when(mockUserService).updateUser(org.mockito.Mockito.eq(id), org.mockito.Mockito.any(UserDto.class));
 
 		Assertions.assertThrows(ResourceException.class, () -> userController.updateProfile(id, dto));

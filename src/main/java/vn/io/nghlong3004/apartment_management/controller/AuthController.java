@@ -2,6 +2,7 @@ package vn.io.nghlong3004.apartment_management.controller;
 
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.CookieValue;
@@ -26,19 +27,19 @@ public class AuthController {
 
 	private final UserService userService;
 
-	@PostMapping(value = "/register", consumes = "application/json")
+	@PostMapping(value = "/register", consumes = MediaType.APPLICATION_JSON_VALUE)
 	@ResponseStatus(code = HttpStatus.CREATED)
 	public void registerUser(@Valid @RequestBody RegisterRequest registerRequest) {
 		userService.register(registerRequest);
 	}
 
-	@PostMapping(value = "/login", consumes = "application/json")
+	@PostMapping(value = "/login", consumes = MediaType.APPLICATION_JSON_VALUE)
 	public ResponseEntity<LoginResponse> loginUser(@Valid @RequestBody LoginRequest loginRequest) {
 		Token token = userService.login(loginRequest);
 		return returnAccessTokenAndRefreshToken(token);
 	}
 
-	@PostMapping("/refresh-token")
+	@PostMapping(value = "/refresh-token", consumes = MediaType.APPLICATION_JSON_VALUE)
 	public ResponseEntity<LoginResponse> refreshToken(@CookieValue(name = "refresh_token") String requestRefreshToken) {
 		Token token = userService.refresh(requestRefreshToken);
 		return returnAccessTokenAndRefreshToken(token);
