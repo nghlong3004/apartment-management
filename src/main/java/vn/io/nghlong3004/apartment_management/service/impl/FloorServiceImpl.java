@@ -4,6 +4,7 @@ import java.util.List;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -16,6 +17,7 @@ import vn.io.nghlong3004.apartment_management.model.Room;
 import vn.io.nghlong3004.apartment_management.model.RoomStatus;
 import vn.io.nghlong3004.apartment_management.model.dto.FloorRequest;
 import vn.io.nghlong3004.apartment_management.model.dto.FloorResponse;
+import vn.io.nghlong3004.apartment_management.model.dto.FloorSummary;
 import vn.io.nghlong3004.apartment_management.model.dto.PagedResponse;
 import vn.io.nghlong3004.apartment_management.repository.FloorRepository;
 import vn.io.nghlong3004.apartment_management.service.FloorService;
@@ -34,6 +36,7 @@ public class FloorServiceImpl implements FloorService {
 	private final RoomService roomService;
 
 	@Override
+	@Transactional
 	public void createJoinRequest(Long floorId, Long roomId) {
 		final Long userId = SecurityUtil.getCurrentUserId()
 				.orElseThrow(() -> new ResourceException(HttpStatus.BAD_REQUEST, ErrorMessageConstant.ID_NOT_FOUND));
@@ -54,6 +57,7 @@ public class FloorServiceImpl implements FloorService {
 	}
 
 	@Override
+	@Transactional
 	public void createMoveRequest(Long floorId, Long roomId) {
 		final Long userId = SecurityUtil.getCurrentUserId()
 				.orElseThrow(() -> new ResourceException(HttpStatus.BAD_REQUEST, ErrorMessageConstant.ID_NOT_FOUND));
@@ -78,6 +82,7 @@ public class FloorServiceImpl implements FloorService {
 	}
 
 	@Override
+	@Transactional(readOnly = true)
 	public FloorResponse getFloorWithRooms(Long floorId) {
 		log.info("Retrieving floor details for floorId={}", floorId);
 
@@ -88,6 +93,7 @@ public class FloorServiceImpl implements FloorService {
 	}
 
 	@Override
+	@Transactional
 	public void deleteFloor(Long floorId) {
 		log.info("Deleting floor floorId={}", floorId);
 
@@ -96,6 +102,8 @@ public class FloorServiceImpl implements FloorService {
 		log.debug("Floor deleted: floorId={}", floorId);
 	}
 
+	@Override
+	@Transactional
 	public void updateFloor(Long floorId, FloorRequest floorUpdateRequest) {
 		log.info("Updating floor with floorId={}", floorId);
 
@@ -112,6 +120,7 @@ public class FloorServiceImpl implements FloorService {
 	}
 
 	@Override
+	@Transactional
 	public void addFloor(FloorRequest floorRequest) {
 		log.info("Creating floor name = {}", floorRequest.getName());
 
@@ -127,6 +136,7 @@ public class FloorServiceImpl implements FloorService {
 	}
 
 	@Override
+	@Transactional(readOnly = true)
 	public PagedResponse<FloorSummary> getFloors(String name, int page, int size, String sort) {
 		log.info("Floors query: name='{}', page={}, size={}, sort={}", name, page, size, sort);
 

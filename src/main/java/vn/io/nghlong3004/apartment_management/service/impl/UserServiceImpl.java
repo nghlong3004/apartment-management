@@ -5,6 +5,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseCookie;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -39,6 +40,7 @@ public class UserServiceImpl implements UserService {
 	private final UserServiceValidator userServiceValidator;
 
 	@Override
+	@Transactional
 	public void register(RegisterRequest registerRequest) {
 		log.info("Register start for email={}", registerRequest.getEmail());
 
@@ -56,6 +58,7 @@ public class UserServiceImpl implements UserService {
 	}
 
 	@Override
+	@Transactional
 	public Token login(LoginRequest loginRequest) {
 		log.info("Login start for email={}", loginRequest.getEmail());
 
@@ -74,6 +77,7 @@ public class UserServiceImpl implements UserService {
 	}
 
 	@Override
+	@Transactional
 	public Token refresh(String requestRefreshToken) {
 		log.info("Refresh token start");
 
@@ -98,6 +102,7 @@ public class UserServiceImpl implements UserService {
 	}
 
 	@Override
+	@Transactional
 	public void updateUser(Long id, UserDto userDto) {
 		userServiceValidator.ensureCanUpdateUser(id);
 		log.info("Update user start id={}", id);
@@ -109,6 +114,7 @@ public class UserServiceImpl implements UserService {
 	}
 
 	@Override
+	@Transactional
 	public UserDto getUser(Long id) {
 		log.info("Get user start id={}", id);
 

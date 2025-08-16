@@ -2,8 +2,8 @@ package vn.io.nghlong3004.apartment_management.service;
 
 import vn.io.nghlong3004.apartment_management.model.dto.FloorRequest;
 import vn.io.nghlong3004.apartment_management.model.dto.FloorResponse;
+import vn.io.nghlong3004.apartment_management.model.dto.FloorSummary;
 import vn.io.nghlong3004.apartment_management.model.dto.PagedResponse;
-import vn.io.nghlong3004.apartment_management.service.impl.FloorSummary;
 
 public interface FloorService {
 

@@ -4,6 +4,7 @@ import java.util.List;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -27,6 +28,8 @@ public class RoomServiceImpl implements RoomService {
 	private final RoomRepository roomRepository;
 	private final FloorRepository floorRepository;
 
+	@Override
+	@Transactional(readOnly = true)
 	public Room getRoom(Long floorId, Long roomId) {
 		return roomRepository.findRoomByFloorIdAndRoomId(floorId, roomId).map(room -> {
 			log.debug("Room found: floorId={}, roomId={}, status={}, userId={}", floorId, roomId, room.getStatus(),
@@ -38,6 +41,8 @@ public class RoomServiceImpl implements RoomService {
 		});
 	}
 
+	@Override
+	@Transactional
 	public void reserveRoom(Room room, Long userId) {
 		log.debug("Reserving room: roomId={}, currentStatus={}, newUserId={}", room.getId(), room.getStatus(), userId);
 		room.setStatus(RoomStatus.RESERVED);
@@ -47,6 +52,7 @@ public class RoomServiceImpl implements RoomService {
 	}
 
 	@Override
+	@Transactional(readOnly = true)
 	public RoomResponse getRoomResponse(Long floorId, Long roomId) {
 
 		Room room = getRoom(floorId, roomId);
@@ -55,6 +61,7 @@ public class RoomServiceImpl implements RoomService {
 	}
 
 	@Override
+	@Transactional(readOnly = true)
 	public List<Room> getAllRooms(Long floorId) {
 		log.info("Fetching all rooms for floorId={}", floorId);
 		List<Room> rooms = roomRepository.findAllRoomsByFloorId(floorId);
@@ -65,6 +72,7 @@ public class RoomServiceImpl implements RoomService {
 	}
 
 	@Override
+	@Transactional
 	public void createRoom(Long floorId, RoomRequest roomCreateRequest) {
 		log.info("Creating room '{}' in floorId={}", roomCreateRequest.getName(), floorId);
 
@@ -78,6 +86,7 @@ public class RoomServiceImpl implements RoomService {
 	}
 
 	@Override
+	@Transactional
 	public void updateRoom(Long floorId, Long roomId, RoomRequest req) {
 		log.info("Updating roomId={} in floorId={} (name='{}', userId={}, status={})", roomId, floorId, req.getName(),
 				req.getUserId(), req.getStatus());
@@ -96,6 +105,7 @@ public class RoomServiceImpl implements RoomService {
 	}
 
 	@Override
+	@Transactional
 	public void deleteRoom(Long floorId, Long roomId) {
 		log.info("Deleting roomId={} in floorId={}", roomId, floorId);
 
@@ -106,6 +116,7 @@ public class RoomServiceImpl implements RoomService {
 	}
 
 	@Override
+	@Transactional
 	public PagedResponse<RoomResponse> getRooms(Long floorId, String name, int page, int size, String sort) {
 		log.info("Rooms query: floorId={}, name='{}', page={}, size={}, sort={}", floorId, name, page, size, sort);
 

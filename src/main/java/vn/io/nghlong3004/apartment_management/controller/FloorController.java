@@ -20,10 +20,10 @@ import jakarta.validation.constraints.Size;
 import lombok.RequiredArgsConstructor;
 import vn.io.nghlong3004.apartment_management.model.dto.FloorRequest;
 import vn.io.nghlong3004.apartment_management.model.dto.FloorResponse;
+import vn.io.nghlong3004.apartment_management.model.dto.FloorSummary;
 import vn.io.nghlong3004.apartment_management.model.dto.JoinRoomRequest;
 import vn.io.nghlong3004.apartment_management.model.dto.PagedResponse;
 import vn.io.nghlong3004.apartment_management.service.FloorService;
-import vn.io.nghlong3004.apartment_management.service.impl.FloorSummary;
 
 @RestController
 @RequestMapping("/api/v1/floor")

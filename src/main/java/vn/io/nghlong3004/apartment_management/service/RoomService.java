@@ -10,8 +10,6 @@ import vn.io.nghlong3004.apartment_management.model.dto.RoomResponse;
 
 public interface RoomService {
 
-	Room getRoom(Long floorId, Long roomId);
-
 	List<Room> getAllRooms(Long floorId);
 
 	void reserveRoom(Room room, Long userId);
@@ -25,5 +23,7 @@ public interface RoomService {
 	void deleteRoom(Long floorId, Long roomId);
 
 	PagedResponse<RoomResponse> getRooms(@Min(1) Long floorId, String name, int page, int size, String sort);
+
+	Room getRoom(Long floorId, Long roomId);
 
 }
