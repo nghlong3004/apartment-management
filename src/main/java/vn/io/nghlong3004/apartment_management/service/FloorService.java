@@ -1,8 +1,7 @@
 package vn.io.nghlong3004.apartment_management.service;
 
-import vn.io.nghlong3004.apartment_management.model.dto.FloorCreateRequest;
+import vn.io.nghlong3004.apartment_management.model.dto.FloorRequest;
 import vn.io.nghlong3004.apartment_management.model.dto.FloorResponse;
-import vn.io.nghlong3004.apartment_management.model.dto.FloorUpdateRequest;
 
 public interface FloorService {
 
@@ -12,10 +11,12 @@ public interface FloorService {
 
 	FloorResponse getFloorWithRooms(Long floorId);
 
-	void updateFloor(Long floorId, FloorUpdateRequest floorUpdateRequest);
-
-	void addFloor(FloorCreateRequest floorCreateRequest);
+	void updateFloor(Long floorId, FloorRequest floorUpdateRequest);
 
 	void deleteFloor(Long floorId);
+
+	void addFloor(FloorRequest floorRequest);
+
+	FloorResponse getFloorByName(String name);
 
 }

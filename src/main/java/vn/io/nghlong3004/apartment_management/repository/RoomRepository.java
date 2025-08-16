@@ -56,13 +56,6 @@ public interface RoomRepository {
 
 	@Select("""
 			    SELECT 1
-			    FROM floor
-			    WHERE id = #{floorId}
-			""")
-	Optional<Boolean> floorExists(Long floorId);
-
-	@Select("""
-			    SELECT 1
 			    FROM room
 			    WHERE floor_id = #{floorId} AND LOWER(name) = LOWER(#{name})
 			""")
@@ -82,5 +75,27 @@ public interface RoomRepository {
 			    WHERE id = #{roomId} AND floor_id = #{floorId}
 			""")
 	void deleteByIdAndFloorId(Long roomId, Long floorId);
+
+	@Select("""
+			    SELECT *
+			      FROM room
+			     WHERE floor_id = #{floorId}
+			       AND LOWER(name) = LOWER(#{name})
+			""")
+	Optional<Room> findByFloorIdAndName(Long floorId, String name);
+
+	@Select("""
+			    SELECT COUNT(id) FROM room WHERE floor_id = #{floorId}
+			""")
+	long countByFloorId(Long floorId);
+
+	@Select("""
+			    SELECT *
+			      FROM room
+			     WHERE floor_id = #{floorId}
+			     ORDER BY #{orderBy}
+			     LIMIT #{limit} OFFSET #{offset}
+			""")
+	List<Room> findPageByFloorId(Long floorId, String orderBy, int limit, int offset);
 
 }

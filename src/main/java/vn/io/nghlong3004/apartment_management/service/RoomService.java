@@ -3,6 +3,7 @@ package vn.io.nghlong3004.apartment_management.service;
 import java.util.List;
 
 import vn.io.nghlong3004.apartment_management.model.Room;
+import vn.io.nghlong3004.apartment_management.model.dto.PagedResponse;
 import vn.io.nghlong3004.apartment_management.model.dto.RoomRequest;
 import vn.io.nghlong3004.apartment_management.model.dto.RoomResponse;
 
@@ -16,11 +17,14 @@ public interface RoomService {
 
 	void createRoom(Long floorId, RoomRequest roomCreateRequest);
 
-	List<RoomResponse> getRoomsByFloor(Long floorId);
+	PagedResponse<RoomResponse> getRoomsByFloor(Long floorId, int page, int size, String sort);
 
 	RoomResponse getRoomResponse(Long floorId, Long roomId);
 
 	void updateRoom(Long floorId, Long roomId, RoomRequest req);
 
 	void deleteRoom(Long floorId, Long roomId);
+
+	RoomResponse getRoomByName(Long floorId, String roomName);
+
 }

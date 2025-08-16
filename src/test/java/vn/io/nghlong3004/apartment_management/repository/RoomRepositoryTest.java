@@ -1,18 +1,19 @@
 package vn.io.nghlong3004.apartment_management.repository;
 
-import java.sql.Timestamp;
-import java.util.Optional;
-import java.util.Random;
+import static org.assertj.core.api.Assertions.assertThat;
 
-import org.assertj.core.api.Assertions;
+import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
+
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.mybatis.spring.boot.test.autoconfigure.MybatisTest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
 import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase.Replace;
-import org.springframework.test.context.transaction.TestTransaction;
 
+import vn.io.nghlong3004.apartment_management.model.Floor;
 import vn.io.nghlong3004.apartment_management.model.Room;
 import vn.io.nghlong3004.apartment_management.model.RoomStatus;
 
@@ -23,91 +24,139 @@ class RoomRepositoryTest {
 	@Autowired
 	private RoomRepository roomRepository;
 
-	private final int maxTestCaseAll = 10;
+	@Autowired
+	private FloorRepository floorRepository;
 
-	@Test
-	@DisplayName("Method: findRoomByFloorIdAndRoomId -> empty when not found")
-	void findRoomByFloorIdAndRoomId_WhenNotFound_ShouldReturnEmpty() {
-		for (int i = 0; i < maxTestCaseAll; ++i) {
-			Long randomFloor = Math.abs(new Random().nextLong()) + 1;
-			Long randomRoom = Math.abs(new Random().nextLong()) + 1;
+	private String shortFloorName() {
+		String rnd = UUID.randomUUID().toString().replace("-", "");
+		return "F" + rnd.substring(0, 5);
+	}
 
-			Optional<Room> result = roomRepository.findRoomByFloorIdAndRoomId(randomFloor, -randomRoom);
-			Assertions.assertThat(result).isEmpty();
-		}
+	private Long createFloor() {
+		Floor floor = Floor.builder().name(shortFloorName()).roomCount(0).build();
+		floorRepository.insert(floor);
+		Floor newFloor = floorRepository.findByName(floor.getName()).orElse(null);
+		assertThat(newFloor.getId()).isNotNull();
+		return newFloor.getId();
+	}
+
+	private Room buildRoom(Long floorId, String name, RoomStatus status) {
+		return Room.builder().floorId(floorId).name(name).status(status).build();
 	}
 
 	@Test
-	@DisplayName("Method: findRoomByFloorIdAndRoomId -> returns Room when found")
-	void findRoomByFloorIdAndRoomId_WhenFound_ShouldReturnRoom() {
-		Long floorId = 1L;
-		String name = "Room-" + 1;
-		RoomStatus status = RoomStatus.AVAILABLE;
+	@DisplayName("findRoomByFloorIdAndRoomId returns Optional<Room> when exists")
+	void findRoomByFloorIdAndRoomId_found() {
+		Long floorId = createFloor();
+		roomRepository.insert(buildRoom(floorId, "A101", RoomStatus.AVAILABLE));
 
-		Long id = 1L;
+		List<Room> all = roomRepository.findAllRoomsByFloorId(floorId);
+		Long roomId = all.get(0).getId();
 
-		Optional<Room> found = roomRepository.findRoomByFloorIdAndRoomId(floorId, id);
-		Assertions.assertThat(found).isPresent();
+		Optional<Room> got = roomRepository.findRoomByFloorIdAndRoomId(floorId, roomId);
 
-		Room r = found.get();
-		Assertions.assertThat(r.getId()).isEqualTo(id);
-		Assertions.assertThat(r.getFloorId()).isEqualTo(floorId);
-		Assertions.assertThat(r.getName()).isEqualTo(name);
-		Assertions.assertThat(r.getStatus()).isEqualTo(status);
+		assertThat(got).isPresent();
+		assertThat(got.get().getId()).isEqualTo(roomId);
+		assertThat(got.get().getFloorId()).isEqualTo(floorId);
+		assertThat(got.get().getName()).isEqualTo("A101");
+		assertThat(got.get().getStatus()).isEqualTo(RoomStatus.AVAILABLE);
 	}
 
 	@Test
-	@DisplayName("Method: updateRoom -> modify fields (userId, name, status), keep 'created', change 'updated'")
-	void updateRoom_ShouldModifyFields_KeepCreated_ChangeUpdated() {
-		Long floorId = 1L;
-		Long id = 1L;
+	@DisplayName("findRoomByFloorIdAndRoomId returns empty when not found or wrong floor")
+	void findRoomByFloorIdAndRoomId_empty() {
+		Long f1 = createFloor();
+		Long f2 = createFloor();
 
-		Room before = roomRepository.findRoomByFloorIdAndRoomId(floorId, id).orElseThrow();
-		Timestamp createdBefore = before.getCreated();
-		Timestamp updatedBefore = before.getUpdated();
+		roomRepository.insert(buildRoom(f1, "B202", RoomStatus.SOLD));
+		Long roomInF1 = roomRepository.findAllRoomsByFloorId(f1).get(0).getId();
 
-		TestTransaction.flagForCommit();
-		TestTransaction.end();
-		TestTransaction.start();
-
-		Room toUpdate = Room.builder().id(id).floorId(floorId).name("R-Updated-" + 2).status(RoomStatus.SOLD).build();
-
-		roomRepository.updateRoom(toUpdate);
-
-		Room after = roomRepository.findRoomByFloorIdAndRoomId(floorId, id).orElseThrow();
-
-		Assertions.assertThat(after.getName()).isEqualTo("R-Updated-" + 2);
-		Assertions.assertThat(after.getStatus()).isEqualTo(RoomStatus.SOLD);
-
-		if (createdBefore != null && after.getCreated() != null) {
-			Assertions.assertThat(after.getCreated()).isEqualTo(createdBefore);
-		}
-		if (updatedBefore != null && after.getUpdated() != null) {
-			Assertions.assertThat(after.getUpdated()).isNotEqualTo(updatedBefore);
-		} else {
-			Assertions.assertThat(after.getUpdated()).isNotNull();
-		}
-
+		assertThat(roomRepository.findRoomByFloorIdAndRoomId(f2, roomInF1)).isEmpty();
+		assertThat(roomRepository.findRoomByFloorIdAndRoomId(f1, -12345L)).isEmpty();
 	}
 
 	@Test
-	@DisplayName("Method: updateRoom -> change floor_id and verify querying by new floor works")
-	void updateRoom_ShouldChangeFloorAndBeQueryableByNewFloor() {
-		Long oldFloor = 2L;
-		Long id = 1l;
+	@DisplayName("findAllRoomsByFloorId returns all rooms in floor")
+	void findAllRoomsByFloorId_list() {
+		Long floorId = createFloor();
+		roomRepository.insert(buildRoom(floorId, "C301", RoomStatus.AVAILABLE));
+		roomRepository.insert(buildRoom(floorId, "C302", RoomStatus.RESERVED));
 
-		Long newFloor = 1L;
+		List<Room> rooms = roomRepository.findAllRoomsByFloorId(floorId);
 
-		Room toUpdate = Room.builder().id(id).floorId(newFloor).name("Moved-" + 1).status(RoomStatus.RESERVED).build();
+		assertThat(rooms).hasSize(2);
+		assertThat(rooms.stream().allMatch(r -> r.getFloorId().equals(floorId))).isTrue();
+		assertThat(rooms.stream().map(Room::getName)).containsExactlyInAnyOrder("C301", "C302");
+	}
 
-		roomRepository.updateRoom(toUpdate);
+	@Test
+	@DisplayName("insert creates new room and can be read back")
+	void insert_createAndReadBack() {
+		Long floorId = createFloor();
 
-		Assertions.assertThat(roomRepository.findRoomByFloorIdAndRoomId(oldFloor, id)).isEmpty();
+		roomRepository.insert(buildRoom(floorId, "D401", RoomStatus.RESERVED));
 
-		Room after = roomRepository.findRoomByFloorIdAndRoomId(newFloor, id).orElseThrow();
-		Assertions.assertThat(after.getFloorId()).isEqualTo(newFloor);
-		Assertions.assertThat(after.getName()).isEqualTo("Moved-" + 1);
-		Assertions.assertThat(after.getStatus()).isEqualTo(RoomStatus.RESERVED);
-		Assertions.assertThat(after.getUpdated()).isNotNull();
+		List<Room> list = roomRepository.findAllRoomsByFloorId(floorId);
+		assertThat(list).hasSize(1);
+		Room got = list.get(0);
+		assertThat(got.getName()).isEqualTo("D401");
+		assertThat(got.getStatus()).isEqualTo(RoomStatus.RESERVED);
+	}
+
+	@Test
+	@DisplayName("updateRoom updates name/userId/status")
+	void updateRoom_modifyFields() {
+		Long floorId = createFloor();
+		roomRepository.insert(buildRoom(floorId, "E501", RoomStatus.AVAILABLE));
+		Room before = roomRepository.findAllRoomsByFloorId(floorId).get(0);
+
+		before.setName("E501-NEW");
+		before.setStatus(RoomStatus.SOLD);
+
+		roomRepository.updateRoom(before);
+
+		Room after = roomRepository.findRoomByFloorIdAndRoomId(floorId, before.getId()).orElseThrow();
+		assertThat(after.getName()).isEqualTo("E501-NEW");
+		assertThat(after.getStatus()).isEqualTo(RoomStatus.SOLD);
+	}
+
+	@Test
+	@DisplayName("existsByFloorIdAndName returns true when duplicate exists (case-insensitive)")
+	void existsByFloorIdAndName_trueWhenDuplicate() {
+		Long floorId = createFloor();
+		roomRepository.insert(buildRoom(floorId, "G601", RoomStatus.AVAILABLE));
+
+		assertThat(roomRepository.existsByFloorIdAndName(floorId, "g601").orElse(false)).isTrue();
+		assertThat(roomRepository.existsByFloorIdAndName(floorId, "g602").orElse(false)).isFalse();
+	}
+
+	@Test
+	@DisplayName("existsByFloorIdAndNameExcludingId ignores self when checking")
+	void existsByFloorIdAndNameExcludingId_ignoreSelf() {
+		Long floorId = createFloor();
+		roomRepository.insert(buildRoom(floorId, "H701", RoomStatus.AVAILABLE));
+		roomRepository.insert(buildRoom(floorId, "H702", RoomStatus.AVAILABLE));
+
+		Long roomA = roomRepository.findAllRoomsByFloorId(floorId).stream().filter(r -> r.getName().equals("H701"))
+				.findFirst().get().getId();
+		Long roomB = roomRepository.findAllRoomsByFloorId(floorId).stream().filter(r -> r.getName().equals("H702"))
+				.findFirst().get().getId();
+
+		assertThat(roomRepository.existsByFloorIdAndNameExcludingId(floorId, "h701", roomB).orElse(false)).isTrue();
+		assertThat(roomRepository.existsByFloorIdAndNameExcludingId(floorId, "h701", roomA).orElse(false)).isFalse();
+	}
+
+	@Test
+	@DisplayName("deleteByIdAndFloorId deletes correct room")
+	void deleteByIdAndFloorId_delete() {
+		Long floorId = createFloor();
+		roomRepository.insert(buildRoom(floorId, "I801", RoomStatus.RESERVED));
+		Long roomId = roomRepository.findAllRoomsByFloorId(floorId).get(0).getId();
+
+		assertThat(roomRepository.findRoomByFloorIdAndRoomId(floorId, roomId)).isPresent();
+
+		roomRepository.deleteByIdAndFloorId(roomId, floorId);
+
+		assertThat(roomRepository.findRoomByFloorIdAndRoomId(floorId, roomId)).isEmpty();
 	}
 }

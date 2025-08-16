@@ -1,5 +1,7 @@
 package vn.io.nghlong3004.apartment_management.service.impl;
 
+import java.util.List;
+
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
@@ -12,9 +14,8 @@ import vn.io.nghlong3004.apartment_management.model.RequestStatus;
 import vn.io.nghlong3004.apartment_management.model.RequestType;
 import vn.io.nghlong3004.apartment_management.model.Room;
 import vn.io.nghlong3004.apartment_management.model.RoomStatus;
-import vn.io.nghlong3004.apartment_management.model.dto.FloorCreateRequest;
+import vn.io.nghlong3004.apartment_management.model.dto.FloorRequest;
 import vn.io.nghlong3004.apartment_management.model.dto.FloorResponse;
-import vn.io.nghlong3004.apartment_management.model.dto.FloorUpdateRequest;
 import vn.io.nghlong3004.apartment_management.repository.FloorRepository;
 import vn.io.nghlong3004.apartment_management.service.FloorService;
 import vn.io.nghlong3004.apartment_management.service.RoomService;
@@ -93,7 +94,7 @@ public class FloorServiceImpl implements FloorService {
 		log.debug("Floor deleted: floorId={}", floorId);
 	}
 
-	public void updateFloor(Long floorId, FloorUpdateRequest floorUpdateRequest) {
+	public void updateFloor(Long floorId, FloorRequest floorUpdateRequest) {
 		log.info("Updating floor with floorId={}", floorId);
 
 		Floor existingFloor = floorRepository.findById(floorId)
@@ -101,7 +102,6 @@ public class FloorServiceImpl implements FloorService {
 
 		existingFloor.setName(floorUpdateRequest.getName());
 		existingFloor.setManagerId(floorUpdateRequest.getManagerId());
-		existingFloor.setRoomCount(floorUpdateRequest.getRoomCount());
 
 		floorRepository.updateFloor(existingFloor);
 
@@ -110,14 +110,25 @@ public class FloorServiceImpl implements FloorService {
 	}
 
 	@Override
-	public void addFloor(FloorCreateRequest floorCreateRequest) {
-		log.info("Creating floor name = {}", floorCreateRequest.getName());
+	public void addFloor(FloorRequest floorRequest) {
+		log.info("Creating floor name = {}", floorRequest.getName());
 
-		Floor floor = Floor.builder().name(floorCreateRequest.getName())
-				.roomCount(floorCreateRequest.getRoomCount() == null ? 0 : floorCreateRequest.getRoomCount()).build();
+		Floor floor = Floor.builder().name(floorRequest.getName()).roomCount(0).build();
 
 		floorRepository.insert(floor);
 
 		log.debug("Floor created successfully id={}", floor.getId());
+	}
+
+	@Override
+	public FloorResponse getFloorByName(String name) {
+		log.info("Start retrieving floor by name: {}", name);
+		Floor floor = floorRepository.findByName(name)
+				.orElseThrow(() -> new ResourceException(HttpStatus.NOT_FOUND, ErrorMessage.FLOOR_NOT_FOUND));
+
+		List<Room> rooms = roomService.getAllRooms(floor.getId());
+
+		log.debug("Retrieved floor details: {}", floor.getName());
+		return FloorResponse.from(floor, rooms);
 	}
 }

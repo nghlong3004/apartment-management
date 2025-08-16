@@ -1,7 +1,5 @@
 package vn.io.nghlong3004.apartment_management.controller;
 
-import java.util.List;
-
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -11,12 +9,17 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
 import lombok.RequiredArgsConstructor;
+import vn.io.nghlong3004.apartment_management.model.dto.PagedResponse;
 import vn.io.nghlong3004.apartment_management.model.dto.RoomRequest;
 import vn.io.nghlong3004.apartment_management.model.dto.RoomResponse;
 import vn.io.nghlong3004.apartment_management.service.RoomService;
@@ -34,16 +37,26 @@ public class RoomController {
 		roomService.createRoom(floorId, request);
 	}
 
-	@GetMapping("/{floorId}/room")
-	@ResponseStatus(code = HttpStatus.OK)
-	public List<RoomResponse> listRooms(@PathVariable @Min(1) Long floorId) {
-		return roomService.getRoomsByFloor(floorId);
+	@GetMapping(value = "/{floorId}/room", params = "!name")
+	@ResponseStatus(HttpStatus.OK)
+	public PagedResponse<RoomResponse> listRooms(@PathVariable @Min(1) Long floorId,
+			@RequestParam(defaultValue = "0") @Min(0) int page,
+			@RequestParam(defaultValue = "20") @Min(1) @Max(100) int size,
+			@RequestParam(defaultValue = "id,asc") String sort) {
+		return roomService.getRoomsByFloor(floorId, page, size, sort);
 	}
 
 	@GetMapping("/{floorId}/room/{roomId}")
 	@ResponseStatus(code = HttpStatus.OK)
 	public RoomResponse getRoom(@PathVariable @Min(1) Long floorId, @PathVariable @Min(1) Long roomId) {
 		return roomService.getRoomResponse(floorId, roomId);
+	}
+
+	@GetMapping(value = "/{floorId}/room", params = "name")
+	@ResponseStatus(HttpStatus.OK)
+	public RoomResponse getRoomByName(@PathVariable @Min(1) Long floorId,
+			@RequestParam("name") @NotBlank @Size(max = 20, message = "Room name must be at most 20 characters") String roomName) {
+		return roomService.getRoomByName(floorId, roomName);
 	}
 
 	@PutMapping(value = "/{floorId}/room/{roomId}", consumes = MediaType.APPLICATION_JSON_VALUE)

@@ -39,6 +39,13 @@ public interface FloorRepository {
 			""")
 	Optional<Floor> findById(Long floorId);
 
+	@Select("""
+			SELECT *
+			FROM floor
+			WHERE LOWER(name) = LOWER(#{name})
+			""")
+	Optional<Floor> findByName(String name);
+
 	@Update("""
 			    UPDATE floor
 			    SET name = #{name},
@@ -67,5 +74,28 @@ public interface FloorRepository {
 			    WHERE floor_id = #{floorId}
 			""")
 	long countRoomsByFloorId(Long floorId);
+
+	@Select("""
+			    SELECT 1
+			    FROM floor
+			    WHERE id = #{floorId}
+			""")
+	Optional<Boolean> floorExists(Long floorId);
+
+	@Update("""
+			    UPDATE floor
+			       SET room_count = room_count + 1,
+			           updated = NOW()
+			     WHERE id = #{floorId}
+			""")
+	int incrementRoomCount(Long floorId);
+
+	@Update("""
+			    UPDATE floor
+			       SET room_count = GREATEST(room_count - 1, 0),
+			           updated = NOW()
+			     WHERE id = #{floorId}
+			""")
+	int decrementRoomCount(Long floorId);
 
 }

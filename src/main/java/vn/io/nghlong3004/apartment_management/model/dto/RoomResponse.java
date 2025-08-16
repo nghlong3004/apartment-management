@@ -9,7 +9,7 @@ import vn.io.nghlong3004.apartment_management.model.RoomStatus;
 @AllArgsConstructor
 public class RoomResponse {
 	private Long id;
-	private Long floorid;
+	private Long floorId;
 	private Long userId;
 	private String name;
 	private RoomStatus status;
