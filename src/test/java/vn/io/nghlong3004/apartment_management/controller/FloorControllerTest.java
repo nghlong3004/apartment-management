@@ -138,20 +138,6 @@ class FloorControllerTest {
 	}
 
 	@Test
-	@DisplayName("GET ?name=... -> returns FloorResponse by name")
-	void getFloorByName_returnsResponse() {
-		String name = "F1";
-		FloorResponse expected = Mockito.mock(FloorResponse.class);
-
-		when(floorService.getFloorByName(name)).thenReturn(expected);
-
-		FloorResponse got = floorController.getFloorByName(name);
-
-		verify(floorService).getFloorByName(name);
-		assertThat(got).isSameAs(expected);
-	}
-
-	@Test
 	@DisplayName("PUT /{floorId} -> delegates to floorService.updateFloor")
 	void updateFloor_delegates() {
 		Long floorId = 13L;

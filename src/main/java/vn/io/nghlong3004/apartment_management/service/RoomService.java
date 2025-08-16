@@ -2,6 +2,7 @@ package vn.io.nghlong3004.apartment_management.service;
 
 import java.util.List;
 
+import jakarta.validation.constraints.Min;
 import vn.io.nghlong3004.apartment_management.model.Room;
 import vn.io.nghlong3004.apartment_management.model.dto.PagedResponse;
 import vn.io.nghlong3004.apartment_management.model.dto.RoomRequest;
@@ -17,14 +18,12 @@ public interface RoomService {
 
 	void createRoom(Long floorId, RoomRequest roomCreateRequest);
 
-	PagedResponse<RoomResponse> getRoomsByFloor(Long floorId, int page, int size, String sort);
-
 	RoomResponse getRoomResponse(Long floorId, Long roomId);
 
 	void updateRoom(Long floorId, Long roomId, RoomRequest req);
 
 	void deleteRoom(Long floorId, Long roomId);
 
-	RoomResponse getRoomByName(Long floorId, String roomName);
+	PagedResponse<RoomResponse> getRooms(@Min(1) Long floorId, String name, int page, int size, String sort);
 
 }

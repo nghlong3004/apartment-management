@@ -16,7 +16,6 @@ import org.springframework.web.bind.annotation.RestController;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
-import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import lombok.RequiredArgsConstructor;
 import vn.io.nghlong3004.apartment_management.model.dto.PagedResponse;
@@ -37,15 +36,6 @@ public class RoomController {
 		roomService.createRoom(floorId, request);
 	}
 
-	@GetMapping(value = "/{floorId}/room")
-	@ResponseStatus(HttpStatus.OK)
-	public PagedResponse<RoomResponse> listRooms(@PathVariable @Min(1) Long floorId,
-			@RequestParam(defaultValue = "0") @Min(0) int page,
-			@RequestParam(defaultValue = "20") @Min(1) @Max(100) int size,
-			@RequestParam(defaultValue = "id,asc") String sort) {
-		return roomService.getRoomsByFloor(floorId, page, size, sort);
-	}
-
 	@GetMapping("/{floorId}/room/{roomId}")
 	@ResponseStatus(code = HttpStatus.OK)
 	public RoomResponse getRoom(@PathVariable @Min(1) Long floorId, @PathVariable @Min(1) Long roomId) {
@@ -54,9 +44,12 @@ public class RoomController {
 
 	@GetMapping(value = "/{floorId}/room")
 	@ResponseStatus(HttpStatus.OK)
-	public RoomResponse getRoomByName(@PathVariable @Min(1) Long floorId,
-			@RequestParam("name") @NotBlank @Size(max = 20, message = "Room name must be at most 20 characters") String roomName) {
-		return roomService.getRoomByName(floorId, roomName);
+	public PagedResponse<RoomResponse> rooms(@PathVariable @Min(1) Long floorId,
+			@RequestParam(required = false) @Size(max = 20, message = "Room name must be at most 20 characters") String name,
+			@RequestParam(defaultValue = "0") @Min(0) int page,
+			@RequestParam(defaultValue = "20") @Min(1) @Max(100) int size,
+			@RequestParam(defaultValue = "id,asc") String sort) {
+		return roomService.getRooms(floorId, name, page, size, sort);
 	}
 
 	@PutMapping(value = "/{floorId}/room/{roomId}", consumes = MediaType.APPLICATION_JSON_VALUE)

@@ -88,27 +88,6 @@ public class FloorServiceImpl implements FloorService {
 	}
 
 	@Override
-	public PagedResponse<FloorSummary> listFloors(int page, int size, String sort) {
-		log.info("Listing floors page={}, size={}, sort={}", page, size, sort);
-
-		int safePage = Math.max(page, 0);
-		int safeSize = Math.max(size, 1);
-		int offset = safePage * safeSize;
-		String orderBy = HelperUtil.normalizeSort(sort);
-
-		long total = floorRepository.countAll();
-		List<Floor> rows = floorRepository.findPage(orderBy, safeSize, offset);
-
-		List<FloorSummary> content = rows.stream().map(f -> FloorSummary.builder().id(f.getId()).name(f.getName())
-				.managerId(f.getManagerId()).roomCount(f.getRoomCount()).build()).toList();
-
-		int totalPages = (int) Math.ceil(total / (double) safeSize);
-
-		return PagedResponse.<FloorSummary>builder().content(content).page(safePage).size(safeSize).totalElements(total)
-				.totalPages(totalPages).build();
-	}
-
-	@Override
 	public void deleteFloor(Long floorId) {
 		log.info("Deleting floor floorId={}", floorId);
 
@@ -148,14 +127,48 @@ public class FloorServiceImpl implements FloorService {
 	}
 
 	@Override
-	public FloorResponse getFloorByName(String name) {
+	public PagedResponse<FloorSummary> getFloors(String name, int page, int size, String sort) {
+		log.info("Floors query: name='{}', page={}, size={}, sort={}", name, page, size, sort);
+
+		if (name != null && !name.isBlank()) {
+			return getFloorByName(name);
+		}
+		return listFloors(page, size, sort);
+	}
+
+	private PagedResponse<FloorSummary> getFloorByName(String currentName) {
+		long t0 = System.nanoTime();
+		final String name = currentName.trim();
 		log.info("Start retrieving floor by name: {}", name);
 		Floor floor = floorRepository.findByName(name)
 				.orElseThrow(() -> new ResourceException(HttpStatus.NOT_FOUND, ErrorMessageConstant.FLOOR_NOT_FOUND));
 
-		List<Room> rooms = roomService.getAllRooms(floor.getId());
+		FloorSummary one = FloorSummary.from(floor);
 
-		log.debug("Retrieved floor details: {}", floor.getName());
-		return FloorResponse.from(floor, rooms);
+		log.debug("Floors(byName) -> 1 item, timeMs={}", (System.nanoTime() - t0) / 1_000_000.0);
+		return PagedResponse.<FloorSummary>builder().content(List.of(one)).page(0).size(1).totalElements(1)
+				.totalPages(1).build();
+	}
+
+	private PagedResponse<FloorSummary> listFloors(int page, int size, String sort) {
+		log.info("Listing floors page={}, size={}, sort={}", page, size, sort);
+		long t0 = System.nanoTime();
+		int safePage = Math.max(page, 0);
+		int safeSize = Math.max(size, 1);
+		int offset = safePage * safeSize;
+		String orderBy = HelperUtil.normalizeSort(sort);
+
+		long total = floorRepository.countAll();
+		List<Floor> rows = total == 0 ? List.of() : floorRepository.findPage(orderBy, safeSize, offset);
+
+		List<FloorSummary> content = rows.stream().map(FloorSummary::from).toList();
+
+		int totalPages = (int) Math.ceil(total / (double) safeSize);
+
+		log.debug("Floors(list) -> fetched={}, total={}, timeMs={}", content.size(), total,
+				(System.nanoTime() - t0) / 1_000_000.0);
+
+		return PagedResponse.<FloorSummary>builder().content(content).page(safePage).size(safeSize).totalElements(total)
+				.totalPages(Math.max(totalPages, 1)).build();
 	}
 }

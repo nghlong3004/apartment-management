@@ -19,8 +19,6 @@ public interface FloorService {
 
 	void addFloor(FloorRequest floorRequest);
 
-	FloorResponse getFloorByName(String name);
-
-	PagedResponse<FloorSummary> listFloors(int page, int size, String sort);
+	PagedResponse<FloorSummary> getFloors(String name, int page, int size, String sort);
 
 }

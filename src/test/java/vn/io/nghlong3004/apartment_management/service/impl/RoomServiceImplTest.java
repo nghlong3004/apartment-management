@@ -3,8 +3,6 @@ package vn.io.nghlong3004.apartment_management.service.impl;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -28,7 +26,6 @@ import vn.io.nghlong3004.apartment_management.constant.ErrorMessageConstant;
 import vn.io.nghlong3004.apartment_management.exception.ResourceException;
 import vn.io.nghlong3004.apartment_management.model.Room;
 import vn.io.nghlong3004.apartment_management.model.RoomStatus;
-import vn.io.nghlong3004.apartment_management.model.dto.PagedResponse;
 import vn.io.nghlong3004.apartment_management.model.dto.RoomRequest;
 import vn.io.nghlong3004.apartment_management.model.dto.RoomResponse;
 import vn.io.nghlong3004.apartment_management.repository.FloorRepository;
@@ -123,55 +120,6 @@ class RoomServiceImplTest {
 
 		when(roomRepository.findAllRoomsByFloorId(4L)).thenReturn(List.of());
 		assertThat(service.getAllRooms(4L)).isEmpty();
-	}
-
-	@Nested
-	class GetRoomsByFloor {
-		@Test
-		@DisplayName("throws FLOOR_NOT_FOUND if floor does not exist")
-		void floorNotFound() {
-			when(floorRepository.floorExists(9L)).thenReturn(Optional.empty());
-
-			ResourceException ex = org.junit.jupiter.api.Assertions.assertThrows(ResourceException.class,
-					() -> service.getRoomsByFloor(9L, 0, 20, "id,asc"));
-			assertThat(ex.getStatus()).isEqualTo(HttpStatus.NOT_FOUND);
-			assertThat(ex.getMessage()).isEqualTo(ErrorMessageConstant.FLOOR_NOT_FOUND);
-		}
-
-		@Test
-		@DisplayName("happy path -> builds PagedResponse and normalizes sort")
-		void happyPath() {
-			when(floorRepository.floorExists(5L)).thenReturn(Optional.of(true));
-			when(roomRepository.countByFloorId(5L)).thenReturn(3L);
-
-			Room r1 = sampleRoom(1L, 5L, "A1", RoomStatus.AVAILABLE);
-			Room r2 = sampleRoom(2L, 5L, "A2", RoomStatus.RESERVED);
-			when(roomRepository.findPageByFloorId(eq(5L), anyString(), eq(2), eq(0))).thenAnswer(inv -> {
-				return List.of(r1, r2);
-			});
-
-			PagedResponse<RoomResponse> page = service.getRoomsByFloor(5L, 0, 2, "name,desc");
-
-			verify(roomRepository).findPageByFloorId(eq(5L), orderByCaptor.capture(), eq(2), eq(0));
-			assertThat(orderByCaptor.getValue()).isEqualTo("name DESC");
-			assertThat(page.getTotalElements()).isEqualTo(3L);
-			assertThat(page.getTotalPages()).isEqualTo((int) Math.ceil(3 / 2.0));
-			assertThat(page.getContent()).hasSize(2);
-			assertThat(page.getContent().get(0).getName()).isEqualTo("A1");
-		}
-
-		@Test
-		@DisplayName("unrecognized sort -> defaults to 'id ASC'")
-		void sortDefault() {
-			when(floorRepository.floorExists(6L)).thenReturn(Optional.of(true));
-			when(roomRepository.countByFloorId(6L)).thenReturn(0L);
-			when(roomRepository.findPageByFloorId(eq(6L), anyString(), eq(20), eq(0))).thenReturn(List.of());
-
-			service.getRoomsByFloor(6L, 0, 20, "hacky_column,drop");
-
-			verify(roomRepository).findPageByFloorId(eq(6L), orderByCaptor.capture(), eq(20), eq(0));
-			assertThat(orderByCaptor.getValue()).isEqualTo("id ASC");
-		}
 	}
 
 	@Nested
@@ -287,44 +235,4 @@ class RoomServiceImplTest {
 		verify(floorRepository).decrementRoomCount(8L);
 	}
 
-	@Nested
-	class GetRoomByName {
-		@Test
-		@DisplayName("throws FLOOR_NOT_FOUND when floor missing")
-		void floorMissing() {
-			when(floorRepository.floorExists(1L)).thenReturn(Optional.empty());
-
-			ResourceException ex = org.junit.jupiter.api.Assertions.assertThrows(ResourceException.class,
-					() -> service.getRoomByName(1L, "R1"));
-			assertThat(ex.getStatus()).isEqualTo(HttpStatus.NOT_FOUND);
-			assertThat(ex.getMessage()).isEqualTo(ErrorMessageConstant.FLOOR_NOT_FOUND);
-		}
-
-		@Test
-		@DisplayName("throws ROOM_NOT_FOUND when no room with that name")
-		void roomMissing() {
-			when(floorRepository.floorExists(2L)).thenReturn(Optional.of(true));
-			when(roomRepository.findByFloorIdAndName(2L, "R1")).thenReturn(Optional.empty());
-
-			ResourceException ex = org.junit.jupiter.api.Assertions.assertThrows(ResourceException.class,
-					() -> service.getRoomByName(2L, "R1"));
-			assertThat(ex.getStatus()).isEqualTo(HttpStatus.NOT_FOUND);
-			assertThat(ex.getMessage()).isEqualTo(ErrorMessageConstant.ROOM_NOT_FOUND);
-		}
-
-		@Test
-		@DisplayName("happy path -> returns RoomResponse")
-		void happy() {
-			when(floorRepository.floorExists(3L)).thenReturn(Optional.of(true));
-			Room r = sampleRoom(100L, 3L, "R100", RoomStatus.SOLD);
-			when(roomRepository.findByFloorIdAndName(3L, "R100")).thenReturn(Optional.of(r));
-
-			RoomResponse dto = service.getRoomByName(3L, "R100");
-
-			assertThat(dto.getId()).isEqualTo(100L);
-			assertThat(dto.getFloorId()).isEqualTo(3L);
-			assertThat(dto.getName()).isEqualTo("R100");
-			assertThat(dto.getStatus()).isEqualTo(RoomStatus.SOLD);
-		}
-	}
 }

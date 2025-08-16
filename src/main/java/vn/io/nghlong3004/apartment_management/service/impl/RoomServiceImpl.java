@@ -65,29 +65,6 @@ public class RoomServiceImpl implements RoomService {
 	}
 
 	@Override
-	public PagedResponse<RoomResponse> getRoomsByFloor(Long floorId, int page, int size, String sort) {
-		log.info("List rooms floorId={}, page={}, size={}, sort={}", floorId, page, size, sort);
-
-		floorRepository.floorExists(floorId).filter(Boolean::booleanValue)
-				.orElseThrow(() -> new ResourceException(HttpStatus.NOT_FOUND, ErrorMessageConstant.FLOOR_NOT_FOUND));
-
-		String orderBy = HelperUtil.normalizeSort(sort);
-		int offset = Math.max(page, 0) * Math.max(size, 1);
-
-		long total = roomRepository.countByFloorId(floorId);
-		List<Room> rooms = roomRepository.findPageByFloorId(floorId, orderBy, size, offset);
-
-		List<RoomResponse> content = rooms.stream()
-				.map(r -> new RoomResponse(r.getId(), r.getFloorId(), r.getUserId(), r.getName(), r.getStatus()))
-				.toList();
-
-		int totalPages = (int) Math.ceil(total / (double) size);
-
-		return PagedResponse.<RoomResponse>builder().content(content).page(page).size(size).totalElements(total)
-				.totalPages(totalPages).build();
-	}
-
-	@Override
 	public void createRoom(Long floorId, RoomRequest roomCreateRequest) {
 		log.info("Creating room '{}' in floorId={}", roomCreateRequest.getName(), floorId);
 
@@ -129,18 +106,17 @@ public class RoomServiceImpl implements RoomService {
 	}
 
 	@Override
-	public RoomResponse getRoomByName(Long floorId, String roomName) {
-		log.info("Start retrieving room '{}' for floor {}", roomName, floorId);
+	public PagedResponse<RoomResponse> getRooms(Long floorId, String name, int page, int size, String sort) {
+		log.info("Rooms query: floorId={}, name='{}', page={}, size={}, sort={}", floorId, name, page, size, sort);
 
 		floorRepository.floorExists(floorId).filter(Boolean::booleanValue)
 				.orElseThrow(() -> new ResourceException(HttpStatus.NOT_FOUND, ErrorMessageConstant.FLOOR_NOT_FOUND));
 
-		Room room = roomRepository.findByFloorIdAndName(floorId, roomName)
-				.orElseThrow(() -> new ResourceException(HttpStatus.NOT_FOUND, ErrorMessageConstant.ROOM_NOT_FOUND));
+		if (name != null && !name.isBlank()) {
+			return getRoomByName(name, floorId);
+		}
 
-		log.debug("Retrieved room details: {}", room);
-
-		return new RoomResponse(room.getId(), room.getFloorId(), room.getUserId(), room.getName(), room.getStatus());
+		return getListRoom(floorId, page, size, sort);
 	}
 
 	private void validatorRoom(Long floorId, RoomRequest roomCreateRequest) {
@@ -150,5 +126,43 @@ public class RoomServiceImpl implements RoomService {
 			throw new ResourceException(HttpStatus.BAD_REQUEST, ErrorMessageConstant.ROOM_ALREADY_NAME);
 		}
 
+	}
+
+	private PagedResponse<RoomResponse> getListRoom(Long floorId, int page, int size, String sort) {
+		long t0 = System.nanoTime();
+		String orderBy = HelperUtil.normalizeSort(sort);
+		int safePage = Math.max(page, 0);
+		int safeSize = Math.max(size, 1);
+		int offset = safePage * safeSize;
+
+		long total = roomRepository.countByFloorId(floorId);
+		List<Room> rooms = total == 0 ? List.of()
+				: roomRepository.findPageByFloorId(floorId, orderBy, safeSize, offset);
+
+		List<RoomResponse> content = rooms.stream().map(RoomResponse::from).toList();
+
+		int totalPages = (int) Math.ceil(total / (double) safeSize);
+
+		PagedResponse<RoomResponse> resp = PagedResponse.<RoomResponse>builder().content(content).page(safePage)
+				.size(safeSize).totalElements(total).totalPages(Math.max(totalPages, 1)).build();
+
+		log.debug("Rooms(list) -> fetched={}, total={}, timeMs={}", content.size(), total,
+				(System.nanoTime() - t0) / 1_000_000.0);
+		return resp;
+	}
+
+	private PagedResponse<RoomResponse> getRoomByName(String currentName, Long floorId) {
+		long t0 = System.nanoTime();
+		final String name = currentName.trim();
+		Room room = roomRepository.findByFloorIdAndName(floorId, name)
+				.orElseThrow(() -> new ResourceException(HttpStatus.NOT_FOUND, ErrorMessageConstant.ROOM_NOT_FOUND));
+
+		RoomResponse dto = RoomResponse.from(room);
+
+		PagedResponse<RoomResponse> resp = PagedResponse.<RoomResponse>builder().content(List.of(dto)).page(0).size(1)
+				.totalElements(1L).totalPages(1).build();
+
+		log.debug("Rooms(byName) -> 1 item, elapsedMs={}", (System.nanoTime() - t0) / 1_000_000.0);
+		return resp;
 	}
 }

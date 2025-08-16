@@ -51,14 +51,19 @@ class RoomControllerTest {
 		return r;
 	}
 
-	private RoomResponse sampleResponse(Long id, Long floorId, String name, Long userId, RoomStatus status) {
-		return new RoomResponse(id, floorId, userId, name, status);
+	private PagedResponse<RoomResponse> sampleResponse(Long id, Long floorId, String name, Long userId,
+			RoomStatus status) {
+		RoomResponse dto = new RoomResponse(id, floorId, userId, name, status);
+
+		PagedResponse<RoomResponse> resp = PagedResponse.<RoomResponse>builder().content(List.of(dto)).page(0).size(1)
+				.totalElements(1L).totalPages(1).build();
+		return resp;
 	}
 
 	private PagedResponse<RoomResponse> samplePage() {
 		return PagedResponse.<RoomResponse>builder()
-				.content(List.of(sampleResponse(1L, 10L, "R1", 2L, RoomStatus.AVAILABLE),
-						sampleResponse(2L, 10L, "R2", 3L, RoomStatus.SOLD)))
+				.content(List.of(new RoomResponse(1L, 10L, 2L, "R1", RoomStatus.AVAILABLE),
+						new RoomResponse(2L, 10L, 3L, "R2", RoomStatus.SOLD)))
 				.page(0).size(2).totalElements(5).totalPages(3).build();
 	}
 
@@ -84,11 +89,11 @@ class RoomControllerTest {
 		String sort = "name,desc";
 		PagedResponse<RoomResponse> expected = samplePage();
 
-		when(roomService.getRoomsByFloor(floorId, page, size, sort)).thenReturn(expected);
+		when(roomService.getRooms(floorId, null, page, size, sort)).thenReturn(expected);
 
-		PagedResponse<RoomResponse> got = controller.listRooms(floorId, page, size, sort);
+		PagedResponse<RoomResponse> got = controller.rooms(floorId, null, page, size, sort);
 
-		verify(roomService).getRoomsByFloor(longCaptor1.capture(), intCaptor1.capture(), intCaptor2.capture(),
+		verify(roomService).getRooms(longCaptor1.capture(), null, intCaptor1.capture(), intCaptor2.capture(),
 				stringCaptor.capture());
 		assertThat(longCaptor1.getValue()).isEqualTo(floorId);
 		assertThat(intCaptor1.getValue()).isEqualTo(page);
@@ -106,8 +111,8 @@ class RoomControllerTest {
 	void getRoom_byId() {
 		Long floorId = 12L;
 		Long roomId = 1201L;
-		RoomResponse expected = sampleResponse(roomId, floorId, "A101", 7L, RoomStatus.AVAILABLE);
-
+		PagedResponse<RoomResponse> listExpected = sampleResponse(roomId, floorId, "A101", 7L, RoomStatus.AVAILABLE);
+		RoomResponse expected = listExpected.getContent().get(0);
 		when(roomService.getRoomResponse(floorId, roomId)).thenReturn(expected);
 
 		RoomResponse got = controller.getRoom(floorId, roomId);
@@ -124,13 +129,14 @@ class RoomControllerTest {
 	void getRoom_byName() {
 		Long floorId = 13L;
 		String roomName = "B202";
-		RoomResponse expected = sampleResponse(222L, floorId, roomName, 8L, RoomStatus.RESERVED);
 
-		when(roomService.getRoomByName(floorId, roomName)).thenReturn(expected);
+		PagedResponse<RoomResponse> expected = sampleResponse(222L, floorId, roomName, 8L, RoomStatus.RESERVED);
 
-		RoomResponse got = controller.getRoomByName(floorId, roomName);
+		when(roomService.getRooms(floorId, roomName, 0, 0, null)).thenReturn(expected);
 
-		verify(roomService).getRoomByName(longCaptor1.capture(), stringCaptor.capture());
+		PagedResponse<RoomResponse> got = controller.rooms(floorId, roomName, 0, 0, null);
+
+		verify(roomService).getRooms(longCaptor1.capture(), stringCaptor.capture(), 0, 0, null);
 		assertThat(longCaptor1.getValue()).isEqualTo(floorId);
 		assertThat(stringCaptor.getValue()).isEqualTo(roomName);
 
