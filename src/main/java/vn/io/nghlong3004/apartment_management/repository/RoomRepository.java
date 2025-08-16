@@ -93,7 +93,7 @@ public interface RoomRepository {
 			    SELECT *
 			      FROM room
 			     WHERE floor_id = #{floorId}
-			     ORDER BY #{orderBy}
+			     ORDER BY ${orderBy}
 			     LIMIT #{limit} OFFSET #{offset}
 			""")
 	List<Room> findPageByFloorId(Long floorId, String orderBy, int limit, int offset);

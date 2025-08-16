@@ -1,5 +1,6 @@
 package vn.io.nghlong3004.apartment_management.repository;
 
+import java.util.List;
 import java.util.Optional;
 
 import org.apache.ibatis.annotations.Delete;
@@ -97,5 +98,23 @@ public interface FloorRepository {
 			     WHERE id = #{floorId}
 			""")
 	int decrementRoomCount(Long floorId);
+
+	@Select("""
+			    SELECT 1
+			    FROM floor
+			    WHERE LOWER(name) = LOWER(#{name})
+			""")
+	Optional<Boolean> existsByName(String name);
+
+	@Select("SELECT COUNT(*) FROM floor")
+	long countAll();
+
+	@Select("""
+			    SELECT *
+			      FROM floor
+			     ORDER BY ${orderBy}
+			     LIMIT #{limit} OFFSET #{offset}
+			""")
+	List<Floor> findPage(String orderBy, int limit, int offset);
 
 }

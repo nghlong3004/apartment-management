@@ -42,7 +42,12 @@ public class SecurityConfig {
 						.ignoringRequestMatchers("/api/v1/**")
 						.csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse()))
 				.authorizeHttpRequests(auth -> auth.requestMatchers("/api/v1/auth/**").permitAll()
-						.requestMatchers(HttpMethod.GET, "/api/v1/user/{id}").permitAll().anyRequest().authenticated())
+						.requestMatchers(HttpMethod.GET, "/api/v1/user/{id}").permitAll()
+						.requestMatchers(HttpMethod.GET, "/api/v1/floor/**").permitAll()
+						.requestMatchers(HttpMethod.POST, "/api/v1/floor/**").hasRole("ADMIN")
+						.requestMatchers(HttpMethod.PUT, "/api/v1/floor/**").hasRole("ADMIN")
+						.requestMatchers(HttpMethod.DELETE, "/api/v1/floor/**").hasRole("ADMIN").anyRequest()
+						.authenticated())
 				.exceptionHandling(exception -> exception.authenticationEntryPoint(authenticationEntryPoint)
 						.accessDeniedHandler(accessDeniedHandler))
 				.addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);

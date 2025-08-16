@@ -31,7 +31,7 @@ import org.springframework.http.ResponseCookie;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.util.ReflectionTestUtils;
 
-import vn.io.nghlong3004.apartment_management.constant.ErrorMessage;
+import vn.io.nghlong3004.apartment_management.constant.ErrorMessageConstant;
 import vn.io.nghlong3004.apartment_management.exception.ResourceException;
 import vn.io.nghlong3004.apartment_management.model.RefreshToken;
 import vn.io.nghlong3004.apartment_management.model.Role;
@@ -122,12 +122,12 @@ class UserServiceImplTest {
 	void register_WhenEmailAlreadyExists_ShouldThrow() {
 		for (int i = 0; i < maxTestCase; i++) {
 			RegisterRequest req = createSampleRegisterRequest();
-			Mockito.doThrow(new ResourceException(HttpStatus.BAD_REQUEST, ErrorMessage.EMAIL_ALREADY_EXISTS))
+			Mockito.doThrow(new ResourceException(HttpStatus.BAD_REQUEST, ErrorMessageConstant.EMAIL_ALREADY_EXISTS))
 					.when(mockUserServiceValidator).ensureEmailNotExists(anyString());
 
 			ResourceException ex = Assertions.assertThrows(ResourceException.class,
 					() -> userServiceImpl.register(req));
-			Assertions.assertEquals(ErrorMessage.EMAIL_ALREADY_EXISTS, ex.getMessage());
+			Assertions.assertEquals(ErrorMessageConstant.EMAIL_ALREADY_EXISTS, ex.getMessage());
 		}
 	}
 
@@ -140,7 +140,7 @@ class UserServiceImplTest {
 
 			ResourceException ex = Assertions.assertThrows(ResourceException.class,
 					() -> userServiceImpl.login(loginRequest));
-			Assertions.assertEquals(ErrorMessage.INVALID_CREDENTIALS, ex.getMessage());
+			Assertions.assertEquals(ErrorMessageConstant.INVALID_CREDENTIALS, ex.getMessage());
 		}
 	}
 
@@ -153,12 +153,12 @@ class UserServiceImplTest {
 					.role(Role.USER).status(UserStatus.ACTIVE).build();
 
 			when(mockUserRepository.findByEmail(user.getEmail())).thenReturn(Optional.of(user));
-			Mockito.doThrow(new ResourceException(HttpStatus.BAD_REQUEST, ErrorMessage.INVALID_CREDENTIALS))
+			Mockito.doThrow(new ResourceException(HttpStatus.BAD_REQUEST, ErrorMessageConstant.INVALID_CREDENTIALS))
 					.when(mockUserServiceValidator).validateCredentials(anyString(), Mockito.eq(user));
 
 			ResourceException ex = Assertions.assertThrows(ResourceException.class,
 					() -> userServiceImpl.login(loginRequest));
-			Assertions.assertEquals(ErrorMessage.INVALID_CREDENTIALS, ex.getMessage());
+			Assertions.assertEquals(ErrorMessageConstant.INVALID_CREDENTIALS, ex.getMessage());
 
 			Mockito.verifyNoInteractions(mockJwtService, mockRefreshTokenService);
 		}
@@ -173,12 +173,12 @@ class UserServiceImplTest {
 					.role(Role.USER).status(UserStatus.INACTIVE).build();
 
 			when(mockUserRepository.findByEmail(user.getEmail())).thenReturn(Optional.of(user));
-			Mockito.doThrow(new ResourceException(HttpStatus.BAD_REQUEST, ErrorMessage.ACCOUNT_INACTIVE))
+			Mockito.doThrow(new ResourceException(HttpStatus.BAD_REQUEST, ErrorMessageConstant.ACCOUNT_INACTIVE))
 					.when(mockUserServiceValidator).validateCredentials(anyString(), Mockito.eq(user));
 
 			ResourceException ex = Assertions.assertThrows(ResourceException.class,
 					() -> userServiceImpl.login(loginRequest));
-			Assertions.assertEquals(ErrorMessage.ACCOUNT_INACTIVE, ex.getMessage());
+			Assertions.assertEquals(ErrorMessageConstant.ACCOUNT_INACTIVE, ex.getMessage());
 
 			Mockito.verifyNoInteractions(mockJwtService, mockRefreshTokenService);
 		}
@@ -230,7 +230,7 @@ class UserServiceImplTest {
 	void getUser_WhenNotFound_ShouldThrow() {
 		when(mockUserRepository.findById(99L)).thenReturn(Optional.empty());
 		ResourceException ex = Assertions.assertThrows(ResourceException.class, () -> userServiceImpl.getUser(99L));
-		Assertions.assertEquals(ErrorMessage.ID_NOT_FOUND, ex.getMessage());
+		Assertions.assertEquals(ErrorMessageConstant.ID_NOT_FOUND, ex.getMessage());
 	}
 
 	@Test
@@ -282,7 +282,7 @@ class UserServiceImplTest {
 
 		ResourceException ex = Assertions.assertThrows(ResourceException.class,
 				() -> userServiceImpl.updateUser(targetId, UserDto.builder().build()));
-		Assertions.assertEquals(ErrorMessage.ID_NOT_FOUND, ex.getMessage());
+		Assertions.assertEquals(ErrorMessageConstant.ID_NOT_FOUND, ex.getMessage());
 	}
 
 	@Test
@@ -312,11 +312,11 @@ class UserServiceImplTest {
 		for (int i = 0; i < maxTestCase; i++) {
 			String invalid = UUID.randomUUID().toString();
 			Mockito.when(mockUserServiceValidator.findAndVerifyRefreshToken(invalid))
-					.thenThrow(new ResourceException(HttpStatus.BAD_REQUEST, ErrorMessage.INVALID_REFRESH_TOKEN));
+					.thenThrow(new ResourceException(HttpStatus.BAD_REQUEST, ErrorMessageConstant.INVALID_REFRESH_TOKEN));
 
 			ResourceException ex = Assertions.assertThrows(ResourceException.class,
 					() -> userServiceImpl.refresh(invalid));
-			Assertions.assertEquals(ErrorMessage.INVALID_REFRESH_TOKEN, ex.getMessage());
+			Assertions.assertEquals(ErrorMessageConstant.INVALID_REFRESH_TOKEN, ex.getMessage());
 		}
 	}
 
@@ -331,7 +331,7 @@ class UserServiceImplTest {
 
 		ResourceException ex = Assertions.assertThrows(ResourceException.class,
 				() -> userServiceImpl.refresh(rt.getToken()));
-		Assertions.assertEquals(ErrorMessage.INVALID_REFRESH_TOKEN, ex.getMessage());
+		Assertions.assertEquals(ErrorMessageConstant.INVALID_REFRESH_TOKEN, ex.getMessage());
 	}
 
 	@Test

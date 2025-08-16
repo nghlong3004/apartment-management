@@ -24,7 +24,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.HttpStatus;
 
-import vn.io.nghlong3004.apartment_management.constant.ErrorMessage;
+import vn.io.nghlong3004.apartment_management.constant.ErrorMessageConstant;
 import vn.io.nghlong3004.apartment_management.exception.ResourceException;
 import vn.io.nghlong3004.apartment_management.model.Room;
 import vn.io.nghlong3004.apartment_management.model.RoomStatus;
@@ -83,7 +83,7 @@ class RoomServiceImplTest {
 			ResourceException ex = org.junit.jupiter.api.Assertions.assertThrows(ResourceException.class,
 					() -> service.getRoom(1L, 10L));
 			assertThat(ex.getStatus()).isEqualTo(HttpStatus.NOT_FOUND);
-			assertThat(ex.getMessage()).isEqualTo(ErrorMessage.ROOM_NOT_FOUND);
+			assertThat(ex.getMessage()).isEqualTo(ErrorMessageConstant.ROOM_NOT_FOUND);
 		}
 	}
 
@@ -135,7 +135,7 @@ class RoomServiceImplTest {
 			ResourceException ex = org.junit.jupiter.api.Assertions.assertThrows(ResourceException.class,
 					() -> service.getRoomsByFloor(9L, 0, 20, "id,asc"));
 			assertThat(ex.getStatus()).isEqualTo(HttpStatus.NOT_FOUND);
-			assertThat(ex.getMessage()).isEqualTo(ErrorMessage.FLOOR_NOT_FOUND);
+			assertThat(ex.getMessage()).isEqualTo(ErrorMessageConstant.FLOOR_NOT_FOUND);
 		}
 
 		@Test
@@ -186,7 +186,7 @@ class RoomServiceImplTest {
 			ResourceException ex = org.junit.jupiter.api.Assertions.assertThrows(ResourceException.class,
 					() -> service.createRoom(1L, req));
 			assertThat(ex.getStatus()).isEqualTo(HttpStatus.NOT_FOUND);
-			assertThat(ex.getMessage()).isEqualTo(ErrorMessage.FLOOR_NOT_FOUND);
+			assertThat(ex.getMessage()).isEqualTo(ErrorMessageConstant.FLOOR_NOT_FOUND);
 
 			verifyNoInteractions(roomRepository);
 		}
@@ -240,7 +240,7 @@ class RoomServiceImplTest {
 			ResourceException ex = org.junit.jupiter.api.Assertions.assertThrows(ResourceException.class,
 					() -> service.updateRoom(4L, 44L, req));
 			assertThat(ex.getStatus()).isEqualTo(HttpStatus.NOT_FOUND);
-			assertThat(ex.getMessage()).isEqualTo(ErrorMessage.ROOM_NOT_FOUND);
+			assertThat(ex.getMessage()).isEqualTo(ErrorMessageConstant.ROOM_NOT_FOUND);
 		}
 
 		@Test
@@ -297,7 +297,7 @@ class RoomServiceImplTest {
 			ResourceException ex = org.junit.jupiter.api.Assertions.assertThrows(ResourceException.class,
 					() -> service.getRoomByName(1L, "R1"));
 			assertThat(ex.getStatus()).isEqualTo(HttpStatus.NOT_FOUND);
-			assertThat(ex.getMessage()).isEqualTo(ErrorMessage.FLOOR_NOT_FOUND);
+			assertThat(ex.getMessage()).isEqualTo(ErrorMessageConstant.FLOOR_NOT_FOUND);
 		}
 
 		@Test
@@ -309,7 +309,7 @@ class RoomServiceImplTest {
 			ResourceException ex = org.junit.jupiter.api.Assertions.assertThrows(ResourceException.class,
 					() -> service.getRoomByName(2L, "R1"));
 			assertThat(ex.getStatus()).isEqualTo(HttpStatus.NOT_FOUND);
-			assertThat(ex.getMessage()).isEqualTo(ErrorMessage.ROOM_NOT_FOUND);
+			assertThat(ex.getMessage()).isEqualTo(ErrorMessageConstant.ROOM_NOT_FOUND);
 		}
 
 		@Test

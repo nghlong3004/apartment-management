@@ -1,14 +1,13 @@
 package vn.io.nghlong3004.apartment_management.service.impl;
 
 import java.util.List;
-import java.util.Map;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import vn.io.nghlong3004.apartment_management.constant.ErrorMessage;
+import vn.io.nghlong3004.apartment_management.constant.ErrorMessageConstant;
 import vn.io.nghlong3004.apartment_management.exception.ResourceException;
 import vn.io.nghlong3004.apartment_management.model.Room;
 import vn.io.nghlong3004.apartment_management.model.RoomStatus;
@@ -18,6 +17,7 @@ import vn.io.nghlong3004.apartment_management.model.dto.RoomResponse;
 import vn.io.nghlong3004.apartment_management.repository.FloorRepository;
 import vn.io.nghlong3004.apartment_management.repository.RoomRepository;
 import vn.io.nghlong3004.apartment_management.service.RoomService;
+import vn.io.nghlong3004.apartment_management.util.HelperUtil;
 
 @Component
 @RequiredArgsConstructor
@@ -27,9 +27,6 @@ public class RoomServiceImpl implements RoomService {
 	private final RoomRepository roomRepository;
 	private final FloorRepository floorRepository;
 
-	private static final Map<String, String> SORT_WHITELIST = Map.of("id", "id", "name", "name", "status", "status",
-			"userId", "user_id", "created", "created", "updated", "updated");
-
 	public Room getRoom(Long floorId, Long roomId) {
 		return roomRepository.findRoomByFloorIdAndRoomId(floorId, roomId).map(room -> {
 			log.debug("Room found: floorId={}, roomId={}, status={}, userId={}", floorId, roomId, room.getStatus(),
@@ -37,7 +34,7 @@ public class RoomServiceImpl implements RoomService {
 			return room;
 		}).orElseThrow(() -> {
 			log.warn("Room not found: floorId={}, roomId={}", floorId, roomId);
-			return new ResourceException(HttpStatus.NOT_FOUND, ErrorMessage.ROOM_NOT_FOUND);
+			return new ResourceException(HttpStatus.NOT_FOUND, ErrorMessageConstant.ROOM_NOT_FOUND);
 		});
 	}
 
@@ -72,9 +69,9 @@ public class RoomServiceImpl implements RoomService {
 		log.info("List rooms floorId={}, page={}, size={}, sort={}", floorId, page, size, sort);
 
 		floorRepository.floorExists(floorId).filter(Boolean::booleanValue)
-				.orElseThrow(() -> new ResourceException(HttpStatus.NOT_FOUND, ErrorMessage.FLOOR_NOT_FOUND));
+				.orElseThrow(() -> new ResourceException(HttpStatus.NOT_FOUND, ErrorMessageConstant.FLOOR_NOT_FOUND));
 
-		String orderBy = normalizeSort(sort);
+		String orderBy = HelperUtil.normalizeSort(sort);
 		int offset = Math.max(page, 0) * Math.max(size, 1);
 
 		long total = roomRepository.countByFloorId(floorId);
@@ -109,10 +106,10 @@ public class RoomServiceImpl implements RoomService {
 				req.getUserId(), req.getStatus());
 
 		roomRepository.findRoomByFloorIdAndRoomId(floorId, roomId)
-				.orElseThrow(() -> new ResourceException(HttpStatus.NOT_FOUND, ErrorMessage.ROOM_NOT_FOUND));
+				.orElseThrow(() -> new ResourceException(HttpStatus.NOT_FOUND, ErrorMessageConstant.ROOM_NOT_FOUND));
 
 		if (roomRepository.existsByFloorIdAndNameExcludingId(floorId, req.getName(), roomId).orElse(false)) {
-			throw new ResourceException(HttpStatus.CONFLICT, "Room name already exists in this floor");
+			throw new ResourceException(HttpStatus.CONFLICT, ErrorMessageConstant.ROOM_ALREADY_NAME);
 		}
 
 		Room room = Room.builder().id(roomId).floorId(floorId).name(req.getName()).userId(req.getUserId())
@@ -136,10 +133,10 @@ public class RoomServiceImpl implements RoomService {
 		log.info("Start retrieving room '{}' for floor {}", roomName, floorId);
 
 		floorRepository.floorExists(floorId).filter(Boolean::booleanValue)
-				.orElseThrow(() -> new ResourceException(HttpStatus.NOT_FOUND, ErrorMessage.FLOOR_NOT_FOUND));
+				.orElseThrow(() -> new ResourceException(HttpStatus.NOT_FOUND, ErrorMessageConstant.FLOOR_NOT_FOUND));
 
 		Room room = roomRepository.findByFloorIdAndName(floorId, roomName)
-				.orElseThrow(() -> new ResourceException(HttpStatus.NOT_FOUND, ErrorMessage.ROOM_NOT_FOUND));
+				.orElseThrow(() -> new ResourceException(HttpStatus.NOT_FOUND, ErrorMessageConstant.ROOM_NOT_FOUND));
 
 		log.debug("Retrieved room details: {}", room);
 
@@ -148,26 +145,10 @@ public class RoomServiceImpl implements RoomService {
 
 	private void validatorRoom(Long floorId, RoomRequest roomCreateRequest) {
 		floorRepository.floorExists(floorId)
-				.orElseThrow(() -> new ResourceException(HttpStatus.NOT_FOUND, ErrorMessage.FLOOR_NOT_FOUND));
+				.orElseThrow(() -> new ResourceException(HttpStatus.NOT_FOUND, ErrorMessageConstant.FLOOR_NOT_FOUND));
 		if (roomRepository.existsByFloorIdAndName(floorId, roomCreateRequest.getName()).orElse(false)) {
-			throw new ResourceException(HttpStatus.BAD_REQUEST, "Room name already exists in this floor");
+			throw new ResourceException(HttpStatus.BAD_REQUEST, ErrorMessageConstant.ROOM_ALREADY_NAME);
 		}
 
-	}
-
-	private String normalizeSort(String sort) {
-		if (sort == null || sort.isBlank())
-			return "id ASC";
-		String[] parts = sort.split(",");
-		String field = parts[0].trim();
-		String dir = (parts.length > 1 ? parts[1].trim() : "asc");
-
-		String column = SORT_WHITELIST.getOrDefault(field, "id");
-		String direction = switch (dir.toLowerCase()) {
-		case "desc" -> "DESC";
-		default -> "ASC";
-		};
-
-		return column + " " + direction;
 	}
 }

@@ -8,7 +8,7 @@ import org.springframework.stereotype.Service;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import vn.io.nghlong3004.apartment_management.constant.ErrorMessage;
+import vn.io.nghlong3004.apartment_management.constant.ErrorMessageConstant;
 import vn.io.nghlong3004.apartment_management.exception.ResourceException;
 import vn.io.nghlong3004.apartment_management.model.User;
 import vn.io.nghlong3004.apartment_management.model.UserPrincipal;
@@ -30,7 +30,7 @@ public class UserDetailsServiceImpl implements UserDetailsService {
 		log.debug("Loading user by id = {}", id);
 
 		User user = userRepository.findById(id)
-				.orElseThrow(() -> new ResourceException(HttpStatus.NOT_FOUND, ErrorMessage.ID_NOT_FOUND));
+				.orElseThrow(() -> new ResourceException(HttpStatus.NOT_FOUND, ErrorMessageConstant.ID_NOT_FOUND));
 		return UserPrincipal.from(user);
 	}
 

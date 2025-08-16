@@ -2,6 +2,8 @@ package vn.io.nghlong3004.apartment_management.service;
 
 import vn.io.nghlong3004.apartment_management.model.dto.FloorRequest;
 import vn.io.nghlong3004.apartment_management.model.dto.FloorResponse;
+import vn.io.nghlong3004.apartment_management.model.dto.PagedResponse;
+import vn.io.nghlong3004.apartment_management.service.impl.FloorSummary;
 
 public interface FloorService {
 
@@ -18,5 +20,7 @@ public interface FloorService {
 	void addFloor(FloorRequest floorRequest);
 
 	FloorResponse getFloorByName(String name);
+
+	PagedResponse<FloorSummary> listFloors(int page, int size, String sort);
 
 }

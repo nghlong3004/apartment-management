@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
@@ -21,7 +22,9 @@ import lombok.RequiredArgsConstructor;
 import vn.io.nghlong3004.apartment_management.model.dto.FloorRequest;
 import vn.io.nghlong3004.apartment_management.model.dto.FloorResponse;
 import vn.io.nghlong3004.apartment_management.model.dto.JoinRoomRequest;
+import vn.io.nghlong3004.apartment_management.model.dto.PagedResponse;
 import vn.io.nghlong3004.apartment_management.service.FloorService;
+import vn.io.nghlong3004.apartment_management.service.impl.FloorSummary;
 
 @RestController
 @RequestMapping("/api/v1/floor")
@@ -55,6 +58,14 @@ public class FloorController {
 	public FloorResponse getFloorByName(
 			@RequestParam("name") @NotBlank @Size(max = 10, message = "Floor name must be at most 10 characters") String name) {
 		return floorService.getFloorByName(name);
+	}
+
+	@GetMapping(params = "!name")
+	@ResponseStatus(HttpStatus.OK)
+	public PagedResponse<FloorSummary> listFloors(@RequestParam(defaultValue = "0") @Min(0) int page,
+			@RequestParam(defaultValue = "20") @Min(1) @Max(100) int size,
+			@RequestParam(defaultValue = "id,asc") String sort) {
+		return floorService.listFloors(page, size, sort);
 	}
 
 	@PutMapping(value = "/{floorId}", consumes = MediaType.APPLICATION_JSON_VALUE)

@@ -1,6 +1,6 @@
 package vn.io.nghlong3004.apartment_management.constant;
 
-public final class ErrorMessage {
+public final class ErrorMessageConstant {
 
 	// Server errors
 	public static final String INTERNAL_SERVER_ERROR = "An unexpected error occurred. Please try again later.";
@@ -20,11 +20,13 @@ public final class ErrorMessage {
 	public static final String ROOM_ALREADY_RESERVED = "Room is already reserved or sold.";
 	public static final String ROOM_MOVE_NOT_ALLOWED = "Cannot move to a reserved room.";
 	public static final String MOVE_TO_OWN_ROOM_NOT_ALLOWED = "Cannot move to your own room.";
+	public static final String ROOM_ALREADY_NAME = "Room name already exists in this floor.";
 
 	// Floor
 	public static final String FLOOR_NOT_FOUND = "Floor not found.";
 	public static final String UNABLE_TO_CREATE_FLOOR = "Unale to create floor.";
 	public static final String FLOOR_STILL_HAS_ROOMS = "Floor still has rooms.";
+	public static final String FLOOR_NAME_ALREADY_EXISTS = "Floor name already exists.";
 
 	// Request
 	public static final String PENDING_REQUEST_EXISTS = "You already have a pending request.";
@@ -40,7 +42,7 @@ public final class ErrorMessage {
 	// HTTP
 	public static final String UNSUPPORTED_MEDIA_TYPE = "Unsupported Content-Type.";
 
-	private ErrorMessage() {
+	private ErrorMessageConstant() {
 
 	}
 }

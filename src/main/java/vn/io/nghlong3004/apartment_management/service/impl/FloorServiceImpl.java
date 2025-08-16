@@ -7,7 +7,7 @@ import org.springframework.stereotype.Service;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import vn.io.nghlong3004.apartment_management.constant.ErrorMessage;
+import vn.io.nghlong3004.apartment_management.constant.ErrorMessageConstant;
 import vn.io.nghlong3004.apartment_management.exception.ResourceException;
 import vn.io.nghlong3004.apartment_management.model.Floor;
 import vn.io.nghlong3004.apartment_management.model.RequestStatus;
@@ -16,10 +16,12 @@ import vn.io.nghlong3004.apartment_management.model.Room;
 import vn.io.nghlong3004.apartment_management.model.RoomStatus;
 import vn.io.nghlong3004.apartment_management.model.dto.FloorRequest;
 import vn.io.nghlong3004.apartment_management.model.dto.FloorResponse;
+import vn.io.nghlong3004.apartment_management.model.dto.PagedResponse;
 import vn.io.nghlong3004.apartment_management.repository.FloorRepository;
 import vn.io.nghlong3004.apartment_management.service.FloorService;
 import vn.io.nghlong3004.apartment_management.service.RoomService;
 import vn.io.nghlong3004.apartment_management.service.validator.FloorServiceValidator;
+import vn.io.nghlong3004.apartment_management.util.HelperUtil;
 import vn.io.nghlong3004.apartment_management.util.SecurityUtil;
 
 @Slf4j
@@ -34,7 +36,7 @@ public class FloorServiceImpl implements FloorService {
 	@Override
 	public void createJoinRequest(Long floorId, Long roomId) {
 		final Long userId = SecurityUtil.getCurrentUserId()
-				.orElseThrow(() -> new ResourceException(HttpStatus.BAD_REQUEST, ErrorMessage.ID_NOT_FOUND));
+				.orElseThrow(() -> new ResourceException(HttpStatus.BAD_REQUEST, ErrorMessageConstant.ID_NOT_FOUND));
 		log.info("Create join request: userId={}, floorId={}, roomId={}", userId, floorId, roomId);
 
 		floorValidator.ensureNoPendingRequestForSelf(userId, RequestType.JOIN);
@@ -54,7 +56,7 @@ public class FloorServiceImpl implements FloorService {
 	@Override
 	public void createMoveRequest(Long floorId, Long roomId) {
 		final Long userId = SecurityUtil.getCurrentUserId()
-				.orElseThrow(() -> new ResourceException(HttpStatus.BAD_REQUEST, ErrorMessage.ID_NOT_FOUND));
+				.orElseThrow(() -> new ResourceException(HttpStatus.BAD_REQUEST, ErrorMessageConstant.ID_NOT_FOUND));
 		log.info("Create move request: userId={}, floorId={}, roomId={}", userId, floorId, roomId);
 
 		floorValidator.ensureNoPendingRequestForSelf(userId, RequestType.MOVE);
@@ -63,7 +65,7 @@ public class FloorServiceImpl implements FloorService {
 
 		if (userId.equals(room.getUserId())) {
 			log.warn("Move request rejected: user tries to move into own room. userId={}, roomId={}", userId, roomId);
-			throw new ResourceException(HttpStatus.BAD_REQUEST, ErrorMessage.MOVE_TO_OWN_ROOM_NOT_ALLOWED);
+			throw new ResourceException(HttpStatus.BAD_REQUEST, ErrorMessageConstant.MOVE_TO_OWN_ROOM_NOT_ALLOWED);
 		}
 
 		floorValidator.ensureRoomMovable(room.getStatus());
@@ -80,9 +82,30 @@ public class FloorServiceImpl implements FloorService {
 		log.info("Retrieving floor details for floorId={}", floorId);
 
 		Floor floor = floorRepository.findById(floorId)
-				.orElseThrow(() -> new ResourceException(HttpStatus.NOT_FOUND, ErrorMessage.FLOOR_NOT_FOUND));
+				.orElseThrow(() -> new ResourceException(HttpStatus.NOT_FOUND, ErrorMessageConstant.FLOOR_NOT_FOUND));
 
 		return FloorResponse.from(floor, roomService.getAllRooms(floorId));
+	}
+
+	@Override
+	public PagedResponse<FloorSummary> listFloors(int page, int size, String sort) {
+		log.info("Listing floors page={}, size={}, sort={}", page, size, sort);
+
+		int safePage = Math.max(page, 0);
+		int safeSize = Math.max(size, 1);
+		int offset = safePage * safeSize;
+		String orderBy = HelperUtil.normalizeSort(sort);
+
+		long total = floorRepository.countAll();
+		List<Floor> rows = floorRepository.findPage(orderBy, safeSize, offset);
+
+		List<FloorSummary> content = rows.stream().map(f -> FloorSummary.builder().id(f.getId()).name(f.getName())
+				.managerId(f.getManagerId()).roomCount(f.getRoomCount()).build()).toList();
+
+		int totalPages = (int) Math.ceil(total / (double) safeSize);
+
+		return PagedResponse.<FloorSummary>builder().content(content).page(safePage).size(safeSize).totalElements(total)
+				.totalPages(totalPages).build();
 	}
 
 	@Override
@@ -98,7 +121,7 @@ public class FloorServiceImpl implements FloorService {
 		log.info("Updating floor with floorId={}", floorId);
 
 		Floor existingFloor = floorRepository.findById(floorId)
-				.orElseThrow(() -> new ResourceException(HttpStatus.NOT_FOUND, ErrorMessage.FLOOR_NOT_FOUND));
+				.orElseThrow(() -> new ResourceException(HttpStatus.NOT_FOUND, ErrorMessageConstant.FLOOR_NOT_FOUND));
 
 		existingFloor.setName(floorUpdateRequest.getName());
 		existingFloor.setManagerId(floorUpdateRequest.getManagerId());
@@ -113,6 +136,10 @@ public class FloorServiceImpl implements FloorService {
 	public void addFloor(FloorRequest floorRequest) {
 		log.info("Creating floor name = {}", floorRequest.getName());
 
+		if (floorRepository.existsByName(floorRequest.getName()).orElse(false)) {
+			throw new ResourceException(HttpStatus.BAD_REQUEST, ErrorMessageConstant.FLOOR_NAME_ALREADY_EXISTS);
+		}
+
 		Floor floor = Floor.builder().name(floorRequest.getName()).roomCount(0).build();
 
 		floorRepository.insert(floor);
@@ -124,7 +151,7 @@ public class FloorServiceImpl implements FloorService {
 	public FloorResponse getFloorByName(String name) {
 		log.info("Start retrieving floor by name: {}", name);
 		Floor floor = floorRepository.findByName(name)
-				.orElseThrow(() -> new ResourceException(HttpStatus.NOT_FOUND, ErrorMessage.FLOOR_NOT_FOUND));
+				.orElseThrow(() -> new ResourceException(HttpStatus.NOT_FOUND, ErrorMessageConstant.FLOOR_NOT_FOUND));
 
 		List<Room> rooms = roomService.getAllRooms(floor.getId());
 

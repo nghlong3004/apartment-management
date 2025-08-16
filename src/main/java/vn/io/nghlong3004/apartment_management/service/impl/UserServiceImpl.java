@@ -8,7 +8,7 @@ import org.springframework.stereotype.Service;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import vn.io.nghlong3004.apartment_management.constant.ErrorMessage;
+import vn.io.nghlong3004.apartment_management.constant.ErrorMessageConstant;
 import vn.io.nghlong3004.apartment_management.exception.ResourceException;
 import vn.io.nghlong3004.apartment_management.model.RefreshToken;
 import vn.io.nghlong3004.apartment_management.model.Role;
@@ -61,7 +61,7 @@ public class UserServiceImpl implements UserService {
 
 		User user = userRepository.findByEmail(normalizeEmail(loginRequest.getEmail())).orElseThrow(() -> {
 			log.warn("Login failed: email not found {}", loginRequest.getEmail());
-			return new ResourceException(HttpStatus.BAD_REQUEST, ErrorMessage.INVALID_CREDENTIALS);
+			return new ResourceException(HttpStatus.BAD_REQUEST, ErrorMessageConstant.INVALID_CREDENTIALS);
 		});
 
 		userServiceValidator.validateCredentials(loginRequest.getPassword(), user);
@@ -81,7 +81,7 @@ public class UserServiceImpl implements UserService {
 
 		User user = userRepository.findById(refreshToken.getUserId()).orElseThrow(() -> {
 			log.error("Refresh token points to non-existing userId={}", refreshToken.getUserId());
-			return new ResourceException(HttpStatus.BAD_REQUEST, ErrorMessage.INVALID_REFRESH_TOKEN);
+			return new ResourceException(HttpStatus.BAD_REQUEST, ErrorMessageConstant.INVALID_REFRESH_TOKEN);
 		});
 
 		String newAccessToken = jwtService.generateAccessToken(user.getId(), user.getRole());
@@ -102,7 +102,7 @@ public class UserServiceImpl implements UserService {
 		userServiceValidator.ensureCanUpdateUser(id);
 		log.info("Update user start id={}", id);
 		User user = userRepository.findById(id)
-				.orElseThrow(() -> new ResourceException(HttpStatus.NOT_FOUND, ErrorMessage.ID_NOT_FOUND));
+				.orElseThrow(() -> new ResourceException(HttpStatus.NOT_FOUND, ErrorMessageConstant.ID_NOT_FOUND));
 
 		userRepository.update(mapUserDtoToUser(id, userDto, user));
 		log.info("Update user success id={}", id);
@@ -113,7 +113,7 @@ public class UserServiceImpl implements UserService {
 		log.info("Get user start id={}", id);
 
 		User user = userRepository.findById(id)
-				.orElseThrow(() -> new ResourceException(HttpStatus.BAD_REQUEST, ErrorMessage.ID_NOT_FOUND));
+				.orElseThrow(() -> new ResourceException(HttpStatus.BAD_REQUEST, ErrorMessageConstant.ID_NOT_FOUND));
 
 		log.info("Get user success id={}", id);
 		return UserDto.from(user);
@@ -130,7 +130,7 @@ public class UserServiceImpl implements UserService {
 			if (!newEmail.equalsIgnoreCase(user.getEmail())) {
 				if (userRepository.existsByEmail(newEmail).orElse(false)) {
 					log.warn("Update user email conflict: id={}, newEmail={}", id, newEmail);
-					throw new ResourceException(HttpStatus.BAD_REQUEST, ErrorMessage.EMAIL_ALREADY_EXISTS);
+					throw new ResourceException(HttpStatus.BAD_REQUEST, ErrorMessageConstant.EMAIL_ALREADY_EXISTS);
 				}
 				String oldEmail = user.getEmail();
 				user.setEmail(newEmail);
