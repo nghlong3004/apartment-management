@@ -1,6 +1,7 @@
 package vn.io.nghlong3004.apartment_management.controller;
 
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -27,34 +28,34 @@ public class FloorController {
 
 	private final FloorService floorService;
 
-	@PostMapping(value = "/{floorId}", consumes = "application/json")
+	@PostMapping(value = "/{floorId}", consumes = MediaType.APPLICATION_JSON_VALUE)
 	@ResponseStatus(code = HttpStatus.CREATED)
 	public void joinRoom(@Min(1) @PathVariable("floorId") Long floorId,
 			@RequestBody @Valid JoinRoomRequest joinRoomRequest) {
 		floorService.createJoinRequest(floorId, joinRoomRequest.roomId());
 	}
 
-	@PutMapping(value = "/{floorId}/room/move", consumes = "application/json")
+	@PutMapping(value = "/{floorId}/room/move", consumes = MediaType.APPLICATION_JSON_VALUE)
 	@ResponseStatus(code = HttpStatus.CREATED)
 	public void moveRoom(@Min(1) @PathVariable("floorId") Long floorId,
 			@RequestBody @Valid JoinRoomRequest joinRoomRequest) {
 		floorService.createMoveRequest(floorId, joinRoomRequest.roomId());
 	}
 
-	@GetMapping(value = "/{floorId}", consumes = "application/json")
+	@GetMapping(value = "/{floorId}", consumes = MediaType.APPLICATION_JSON_VALUE)
 	@ResponseStatus(code = HttpStatus.OK)
 	public FloorResponse getFloor(@Min(1) @PathVariable("floorId") Long floorId) {
 		return floorService.getFloorWithRooms(floorId);
 	}
 
-	@PutMapping(value = "/{floorId}", consumes = "application/json")
+	@PutMapping(value = "/{floorId}", consumes = MediaType.APPLICATION_JSON_VALUE)
 	@ResponseStatus(code = HttpStatus.OK)
 	public void updateFloor(@Min(1) @PathVariable("floorId") Long floorId,
 			@RequestBody @Valid FloorUpdateRequest request) {
 		floorService.updateFloor(floorId, request);
 	}
 
-	@PostMapping(consumes = "application/json")
+	@PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE)
 	@ResponseStatus(code = HttpStatus.CREATED)
 	public void addFloor(@RequestBody @Valid FloorCreateRequest request) {
 		floorService.addFloor(request);

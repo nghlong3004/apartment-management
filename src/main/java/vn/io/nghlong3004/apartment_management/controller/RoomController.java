@@ -3,6 +3,7 @@ package vn.io.nghlong3004.apartment_management.controller;
 import java.util.List;
 
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -27,7 +28,7 @@ public class RoomController {
 
 	private final RoomService roomService;
 
-	@PostMapping(value = "/{floorId}/room", consumes = "application/json")
+	@PostMapping(value = "/{floorId}/room", consumes = MediaType.APPLICATION_JSON_VALUE)
 	@ResponseStatus(code = HttpStatus.CREATED)
 	public void createRoom(@PathVariable @Min(1) Long floorId, @RequestBody @Valid RoomRequest request) {
 		roomService.createRoom(floorId, request);
@@ -45,7 +46,7 @@ public class RoomController {
 		return roomService.getRoomResponse(floorId, roomId);
 	}
 
-	@PutMapping(value = "/{floorId}/room/{roomId}", consumes = "application/json")
+	@PutMapping(value = "/{floorId}/room/{roomId}", consumes = MediaType.APPLICATION_JSON_VALUE)
 	@ResponseStatus(code = HttpStatus.OK)
 	public void updateRoom(@PathVariable @Min(1) Long floorId, @PathVariable @Min(1) Long roomId,
 			@RequestBody @Valid RoomRequest request) {
