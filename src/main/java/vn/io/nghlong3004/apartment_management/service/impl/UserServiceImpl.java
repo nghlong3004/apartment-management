@@ -123,6 +123,20 @@ public class UserServiceImpl implements UserService {
 		return UserDto.from(user);
 	}
 
+	@Override
+	@Transactional
+	public void delete(Long id) {
+		userServiceValidator.ensureCanDeleteUser(id);
+		log.info("Delete user start id={}", id);
+
+		long t0 = System.nanoTime();
+		userRepository.delete(id);
+		log.debug("user(delete) -> timeMs={}", (System.nanoTime() - t0) / 1_000_000.0);
+
+		log.info("Delete user success id={}", id);
+
+	}
+
 	private String normalizeEmail(String email) {
 		return email == null ? null : email.trim().toLowerCase();
 	}

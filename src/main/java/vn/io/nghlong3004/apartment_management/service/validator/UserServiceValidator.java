@@ -65,4 +65,23 @@ public class UserServiceValidator {
 		return refreshToken;
 	}
 
+	public void ensureCanDeleteUser(Long id) {
+		boolean isAdmin = SecurityUtil.hasRole("ADMIN");
+		if (!isAdmin) {
+			log.warn("Delete user forbidden: userId={}", id);
+			throw new ResourceException(HttpStatus.FORBIDDEN, ErrorMessageConstant.FORBIDDEN);
+		}
+		Long actorId = SecurityUtil.getCurrentUserId()
+				.orElseThrow(() -> new ResourceException(HttpStatus.BAD_REQUEST, ErrorMessageConstant.ID_NOT_FOUND));
+		if (actorId == null || id.equals(actorId)) {
+			log.warn("Delete user forbidden: actorId={}, targetUserId={}", actorId, id);
+			throw new ResourceException(HttpStatus.FORBIDDEN, ErrorMessageConstant.SELF_DELETE_FORBIDDEN);
+		}
+		userRepository.findById(id).orElseThrow(() -> {
+			log.warn("Delete failed: id does not exist   {}", id);
+			return new ResourceException(HttpStatus.BAD_REQUEST, ErrorMessageConstant.USER_NOT_FOUND_WITH_ID);
+		});
+
+	}
+
 }

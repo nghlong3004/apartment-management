@@ -14,6 +14,9 @@ public final class ErrorMessageConstant {
 	public static final String REFRESH_TOKEN_EXPIRED = "Refresh token has expired. Please sign in again.";
 	public static final String ACCOUNT_INACTIVE = "Account is inactive.";
 	public static final String PROFILE_UPDATE_FORBIDDEN = "You do not have permission to change this profile.";
+	public static final String FORBIDDEN = "You do not have permission to perform this action.";
+	public static final String SELF_DELETE_FORBIDDEN = "You cannot delete your own account.";
+	public static final String USER_NOT_FOUND_WITH_ID = "User not found.";
 
 	// Room
 	public static final String ROOM_NOT_FOUND = "Room does not exist.";

@@ -2,6 +2,7 @@ package vn.io.nghlong3004.apartment_management.repository;
 
 import java.util.Optional;
 
+import org.apache.ibatis.annotations.Delete;
 import org.apache.ibatis.annotations.Insert;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Select;
@@ -17,13 +18,13 @@ public interface UserRepository {
 			FROM floor_user
 			WHERE email = #{email}
 			""")
-	public Optional<Boolean> existsByEmail(String email);
+	Optional<Boolean> existsByEmail(String email);
 
 	@Insert("""
 			INSERT INTO floor_user(first_name, last_name, email, password, phone_number, role, status)
 			VALUES(#{firstName}, #{lastName}, #{email}, #{password}, #{phoneNumber}, #{role}::user_role, #{status}::user_status)
 			""")
-	public void save(User user);
+	void save(User user);
 
 	@Select("""
 			SELECT id, first_name AS firstName, last_name AS lastName, email, password, phone_number AS phoneNumber,
@@ -31,13 +32,13 @@ public interface UserRepository {
 			FROM floor_user
 			WHERE email = #{email}
 			""")
-	public Optional<User> findByEmail(String email);
+	Optional<User> findByEmail(String email);
 
 	@Select("""
 			SELECT password FROM floor_user
 			WHERE email = #{email}
 			""")
-	public Optional<String> findPasswordByEmail(String email);
+	Optional<String> findPasswordByEmail(String email);
 
 	@Select("""
 			SELECT id, first_name AS firstName, last_name AS lastName, email, password, phone_number AS phoneNumber,
@@ -45,7 +46,7 @@ public interface UserRepository {
 			FROM floor_user
 			WHERE id = #{userId}
 			""")
-	public Optional<User> findById(Long userId);
+	Optional<User> findById(Long userId);
 
 	@Update("""
 			UPDATE floor_user
@@ -57,6 +58,13 @@ public interface UserRepository {
 				updated = NOW()
 			WHERE id = #{id}
 			""")
-	public void update(User user);
+	void update(User user);
+
+	@Delete("""
+			DELETE
+			FROM floor_user
+			WHERE id = #{id}
+			""")
+	void delete(Long id);
 
 }
