@@ -187,4 +187,37 @@ class UserRepositoryTest {
 		}
 	}
 
+	@Test
+	@DisplayName("Method: delete -> removes existing user row")
+	void delete_WhenIdExists_ShouldRemoveRow() {
+		String username = "u" + UUID.randomUUID();
+		User u = createSampleUser(username);
+
+		userRepository.save(u);
+		Long id = userRepository.findByEmail(u.getEmail()).orElseThrow().getId();
+
+		Assertions.assertThat(userRepository.findById(id)).isPresent();
+
+		userRepository.delete(id);
+
+		Assertions.assertThat(userRepository.findById(id)).isEmpty();
+		Optional<User> byEmail = userRepository.findByEmail(u.getEmail());
+		Assertions.assertThat(byEmail).isEmpty();
+	}
+
+	@Test
+	@DisplayName("Method: delete -> no-op when id does not exist")
+	void delete_WhenIdNotExists_ShouldBeNoOp() {
+		String username = "u" + UUID.randomUUID();
+		User u = createSampleUser(username);
+
+		userRepository.save(u);
+		Long existingId = userRepository.findByEmail(u.getEmail()).orElseThrow().getId();
+
+		userRepository.delete(-999999L);
+
+		Assertions.assertThat(userRepository.findById(existingId)).isPresent();
+		Assertions.assertThat(userRepository.findByEmail(u.getEmail())).isPresent();
+	}
+
 }

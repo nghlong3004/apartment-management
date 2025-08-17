@@ -1,6 +1,7 @@
 package vn.io.nghlong3004.apartment_management.controller;
 
 import org.springframework.http.HttpStatus;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -32,6 +33,12 @@ public class UserController {
 	@ResponseStatus(code = HttpStatus.OK)
 	public void updateProfile(@Min(1) @PathVariable Long id, @Valid @RequestBody UserDto userDto) {
 		userService.updateUser(id, userDto);
+	}
+
+	@DeleteMapping(value = "/{id}", consumes = "application/json")
+	@ResponseStatus(code = HttpStatus.OK)
+	public void delete(@Min(1) @PathVariable Long id) {
+		userService.delete(id);
 	}
 
 }

@@ -1,5 +1,7 @@
 package vn.io.nghlong3004.apartment_management.controller;
 
+import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -81,7 +83,8 @@ class UserControllerTest {
 		Long id = 8L;
 		UserDto dto = sampleUserDto();
 
-		org.mockito.Mockito.doThrow(new ResourceException(HttpStatus.FORBIDDEN, ErrorMessageConstant.PROFILE_UPDATE_FORBIDDEN))
+		org.mockito.Mockito
+				.doThrow(new ResourceException(HttpStatus.FORBIDDEN, ErrorMessageConstant.PROFILE_UPDATE_FORBIDDEN))
 				.when(mockUserService).updateUser(org.mockito.Mockito.eq(id), org.mockito.Mockito.any(UserDto.class));
 
 		Assertions.assertThrows(ResourceException.class, () -> userController.updateProfile(id, dto));
@@ -108,7 +111,8 @@ class UserControllerTest {
 		Long id = 1234L;
 		UserDto dto = sampleUserDto();
 
-		org.mockito.Mockito.doThrow(new ResourceException(HttpStatus.BAD_REQUEST, ErrorMessageConstant.ENDPOINT_NOT_FOUND))
+		org.mockito.Mockito
+				.doThrow(new ResourceException(HttpStatus.BAD_REQUEST, ErrorMessageConstant.ENDPOINT_NOT_FOUND))
 				.when(mockUserService).updateUser(org.mockito.Mockito.eq(id), org.mockito.Mockito.any(UserDto.class));
 
 		Assertions.assertThrows(ResourceException.class, () -> userController.updateProfile(id, dto));
@@ -127,6 +131,29 @@ class UserControllerTest {
 		Assertions.assertNotNull(result);
 		Assertions.assertNull(result.getEmail());
 		Assertions.assertNull(result.getFirstName());
+	}
+
+	@Test
+	@DisplayName("DELETE /api/v1/user/{id} -> should delegate to service and return OK")
+	void deleteUser_ShouldDelegateToService() {
+		Long userId = 1L;
+
+		doNothing().when(mockUserService).delete(userId);
+
+		userController.delete(userId);
+
+		verify(mockUserService).delete(userId);
+	}
+
+	@Test
+	@DisplayName("DELETE /api/v1/user/{id} -> should propagate exception from service")
+	void deleteUser_ShouldPropagateException() {
+		Long userId = 404L;
+
+		doThrow(new ResourceException(HttpStatus.NOT_FOUND, ErrorMessageConstant.ENDPOINT_NOT_FOUND))
+				.when(mockUserService).delete(userId);
+
+		Assertions.assertThrows(ResourceException.class, () -> userController.delete(userId));
 	}
 
 }
