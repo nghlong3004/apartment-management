@@ -55,6 +55,9 @@ public interface UserRepository {
 				last_name = #{lastName},
 				email = #{email},
 				phone_number = #{phoneNumber},
+				floor_id = #{floorId},
+				role = #{role}::user_role,
+				status = #{status}::user_status,
 				updated = NOW()
 			WHERE id = #{id}
 			""")

@@ -49,7 +49,7 @@ public class UserServiceImpl implements UserService {
 		User user = User.builder().firstName(registerRequest.firstName()).lastName(registerRequest.lastName())
 				.email(normalizeEmail(registerRequest.email())).phoneNumber(registerRequest.phoneNumber())
 				.password(passwordEncoder.encode(registerRequest.password())).role(Role.USER).status(UserStatus.ACTIVE)
-				.floor(null).build();
+				.floorId(null).build();
 
 		userRepository.save(user);
 		log.info("Register success for email={}", user.getEmail());

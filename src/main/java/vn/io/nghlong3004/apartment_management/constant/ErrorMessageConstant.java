@@ -44,6 +44,17 @@ public final class ErrorMessageConstant {
 
 	// HTTP
 	public static final String UNSUPPORTED_MEDIA_TYPE = "Unsupported Content-Type.";
+	public static final String MALFORMED_REQUEST_BODY_MESSAGE = "Invalid request body format. Please check the structure and data types.";
+
+	// Admin
+	public static final String ALREADY_A_MANAGER = "This user is already a manager.";
+	public static final String USER_NOT_IN_FLOOR = "User does not belong to this floor.";
+	public static final String NOT_MANAGER = "This user is not a manager.";
+	public static final String USER_BANNED = "This user has been banned.";
+	public static final String OWNER_ROOM = "This user is already the owner of the room.";
+	public static final String MANAGER_DIFFERENT_ROOM = "User is a manager of a different floor.";
+	public static final String NOT_OWNER_ROOM = "This user is not the owner of the room.";
+	public static final String MANAGER_ROOM = "User is a manager of floor.";
 
 	private ErrorMessageConstant() {
 

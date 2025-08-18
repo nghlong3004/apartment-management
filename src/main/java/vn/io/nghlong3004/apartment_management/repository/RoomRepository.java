@@ -15,35 +15,29 @@ import vn.io.nghlong3004.apartment_management.model.Room;
 public interface RoomRepository {
 
 	@Select("""
-			SELECT id,
-				   floor_id    AS floorId,
-			       user_id        AS userId,
-			       name,
-			       status,
-			       created,
-			       updated
-			 FROM  room
-			 WHERE floor_id = #{floorId}
-			 AND id = #{roomId}
+				SELECT *
+			 	FROM  room
+			 	WHERE floor_id = #{floorId}
+			 	AND id = #{roomId}
 			""")
 	public Optional<Room> findRoomByFloorIdAndRoomId(Long floorId, Long roomId);
 
 	@Update("""
-			UPDATE room
-			SET
+				UPDATE room
+				SET
 				   floor_id = #{floorId},
 				   user_id = #{userId},
 				   name = #{name},
 				   status = #{status}::room_status ,
 				   updated = NOW()
-			WHERE  id = #{id}
+				WHERE  id = #{id}
 			""")
 	public void updateRoom(Room room);
 
 	@Select("""
-			SELECT *
-			 FROM  room
-			 WHERE floor_id = #{floorId}
+				SELECT *
+			 	FROM  room
+			 	WHERE floor_id = #{floorId}
 			""")
 	public List<Room> findAllRoomsByFloorId(Long floorId);
 
@@ -98,4 +92,18 @@ public interface RoomRepository {
 			""")
 	List<Room> findPageByFloorId(Long floorId, String orderBy, int limit, int offset);
 
+	@Select("""
+				SELECT *
+				FROM room
+				WHERE id = #{roomId}
+			""")
+
+	Optional<Room> findById(Long roomId);
+
+	@Select("""
+				SELECT *
+				FROM room
+				WHERE user_id = #{userId}
+			""")
+	Room findByUserId(Long userId);
 }
