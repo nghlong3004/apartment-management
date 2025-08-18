@@ -9,8 +9,10 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import vn.io.nghlong3004.apartment_management.constant.ErrorMessageConstant;
 import vn.io.nghlong3004.apartment_management.exception.ResourceException;
+import vn.io.nghlong3004.apartment_management.model.Floor;
 import vn.io.nghlong3004.apartment_management.model.Role;
 import vn.io.nghlong3004.apartment_management.model.Room;
+import vn.io.nghlong3004.apartment_management.model.RoomStatus;
 import vn.io.nghlong3004.apartment_management.model.User;
 import vn.io.nghlong3004.apartment_management.model.UserStatus;
 import vn.io.nghlong3004.apartment_management.model.dto.FloorManagerRequest;
@@ -41,9 +43,13 @@ public class AdminServiceImpl implements AdminService {
 			log.warn("User {} is already a manager (floorId={})", user.getId(), floorId);
 			throw new ResourceException(HttpStatus.BAD_REQUEST, ErrorMessageConstant.ALREADY_A_MANAGER);
 		}
+		Floor floor = floorRepository.findById(floorId)
+				.orElseThrow(() -> new ResourceException(HttpStatus.NOT_FOUND, ErrorMessageConstant.FLOOR_NOT_FOUND));
+		if (floor.getManagerId() != null) {
+			throw new ResourceException(HttpStatus.BAD_REQUEST, ErrorMessageConstant.MANAGER_FLOOR);
+		}
 
 		user.setRole(Role.MANAGER);
-		user.setFloorId(floorId);
 
 		userRepository.update(user);
 
@@ -63,6 +69,12 @@ public class AdminServiceImpl implements AdminService {
 			throw new ResourceException(HttpStatus.BAD_REQUEST, ErrorMessageConstant.NOT_MANAGER);
 		}
 
+		Floor floor = floorRepository.findById(floorId)
+				.orElseThrow(() -> new ResourceException(HttpStatus.NOT_FOUND, ErrorMessageConstant.FLOOR_NOT_FOUND));
+		if (floor.getManagerId() != user.getId()) {
+			throw new ResourceException(HttpStatus.BAD_REQUEST, ErrorMessageConstant.NOT_MANAGER_FLOOR);
+		}
+
 		user.setRole(Role.USER);
 
 		userRepository.update(user);
@@ -73,22 +85,25 @@ public class AdminServiceImpl implements AdminService {
 	}
 
 	@Override
+	@Transactional()
 	public void setOwner(Long roomId, RoomOwnerRequest request) {
 		log.info("Start set owner room with roomId{} for userId: {}", roomId, request.userId());
 		User user = getActiveUserById(request.userId());
 
 		Room room = roomRepository.findById(roomId)
 				.orElseThrow(() -> new ResourceException(HttpStatus.BAD_REQUEST, ErrorMessageConstant.ROOM_NOT_FOUND));
-		if (room.getUserId() == request.userId()) {
-			throw new ResourceException(HttpStatus.BAD_REQUEST, ErrorMessageConstant.OWNER_ROOM);
+		if (room.getUserId() != null || room.getStatus() != RoomStatus.AVAILABLE) {
+			throw new ResourceException(HttpStatus.BAD_REQUEST, ErrorMessageConstant.OCCUPIED_ROOM);
 		}
 
 		Room oldRoom = roomRepository.findByUserId(user.getId());
 		room.setUserId(user.getId());
+		room.setStatus(RoomStatus.SOLD);
 		roomRepository.updateRoom(room);
 
 		if (oldRoom != null) {
 			oldRoom.setUserId(null);
+			oldRoom.setStatus(RoomStatus.AVAILABLE);
 			roomRepository.updateRoom(oldRoom);
 		}
 
@@ -107,6 +122,7 @@ public class AdminServiceImpl implements AdminService {
 		}
 
 		room.setUserId(null);
+		room.setStatus(RoomStatus.AVAILABLE);
 
 		roomRepository.updateRoom(room);
 
