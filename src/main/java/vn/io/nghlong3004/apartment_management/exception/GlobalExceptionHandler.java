@@ -103,7 +103,7 @@ public class GlobalExceptionHandler {
 			HttpMessageNotReadableException exception) {
 		log.warn("Http message not readable exception: {}", exception.getMessage());
 
-		return handleException(HttpStatus.BAD_REQUEST, exception.getMessage());
+		return handleException(HttpStatus.BAD_REQUEST, ErrorMessageConstant.MALFORMED_REQUEST_BODY_MESSAGE);
 	}
 
 	@ExceptionHandler(ConstraintViolationException.class)

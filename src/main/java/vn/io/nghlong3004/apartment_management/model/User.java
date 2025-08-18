@@ -16,7 +16,7 @@ public class User {
 	private String phoneNumber;
 	private Role role;
 	private UserStatus status;
-	private Floor floor;
+	private Long floorId;
 	private Timestamp created;
 	private Timestamp updated;
 }

@@ -17,33 +17,33 @@ import vn.io.nghlong3004.apartment_management.model.RequestType;
 public interface FloorRepository {
 
 	@Insert("""
-			INSERT INTO
+				INSERT INTO
 				   floor_request (user_id, floor_id, room_id, type, status)
-			VALUES
+				VALUES
 				   (#{userId}, #{floorId}, #{roomId}, #{type}::request_type, #{status}::request_status)
 			""")
 	void createRequest(Long userId, Long floorId, Long roomId, RequestType type, RequestStatus status);
 
 	@Select("""
-			SELECT 1
-			FROM floor_request
-			     WHERE user_id = #{userId}
-			     AND type = #{requestType, jdbcType=OTHER}
-			     AND status = 'PENDING'
+				SELECT 1
+				FROM floor_request
+			    WHERE user_id = #{userId}
+			    AND type = #{requestType, jdbcType=OTHER}
+			    AND status = 'PENDING'
 			""")
 	Optional<Boolean> existsPendingRequest(Long userId, RequestType requestType);
 
 	@Select("""
-			SELECT *
-			FROM floor
-			WHERE id = #{floorId}
+				SELECT *
+				FROM floor
+				WHERE id = #{floorId}
 			""")
 	Optional<Floor> findById(Long floorId);
 
 	@Select("""
-			SELECT *
-			FROM floor
-			WHERE LOWER(name) = LOWER(#{name})
+				SELECT *
+				FROM floor
+				WHERE LOWER(name) = LOWER(#{name})
 			""")
 	Optional<Floor> findByName(String name);
 
@@ -93,9 +93,9 @@ public interface FloorRepository {
 
 	@Update("""
 			    UPDATE floor
-			       SET room_count = GREATEST(room_count - 1, 0),
-			           updated = NOW()
-			     WHERE id = #{floorId}
+			    SET room_count = GREATEST(room_count - 1, 0),
+			        updated = NOW()
+			    WHERE id = #{floorId}
 			""")
 	int decrementRoomCount(Long floorId);
 
@@ -106,7 +106,10 @@ public interface FloorRepository {
 			""")
 	Optional<Boolean> existsByName(String name);
 
-	@Select("SELECT COUNT(*) FROM floor")
+	@Select("""
+				SELECT COUNT(*)
+				FROM floor
+			""")
 	long countAll();
 
 	@Select("""
@@ -116,5 +119,12 @@ public interface FloorRepository {
 			     LIMIT #{limit} OFFSET #{offset}
 			""")
 	List<Floor> findPage(String orderBy, int limit, int offset);
+
+	@Update("""
+				UPDATE floor
+				SET manager_id = #{managerId}
+				WHERE id = #{floorId}
+			""")
+	void updateManager(Long floorId, Long managerId);
 
 }

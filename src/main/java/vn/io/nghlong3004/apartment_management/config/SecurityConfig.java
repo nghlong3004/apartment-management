@@ -46,8 +46,8 @@ public class SecurityConfig {
 						.requestMatchers(HttpMethod.GET, "/api/v1/floor/**").permitAll()
 						.requestMatchers(HttpMethod.POST, "/api/v1/floor/**").hasRole("ADMIN")
 						.requestMatchers(HttpMethod.PUT, "/api/v1/floor/**").hasRole("ADMIN")
-						.requestMatchers(HttpMethod.DELETE, "/api/v1/floor/**").hasRole("ADMIN").anyRequest()
-						.authenticated())
+						.requestMatchers(HttpMethod.DELETE, "/api/v1/floor/**").hasRole("ADMIN")
+						.requestMatchers("/api/v1/admin/**").hasRole("ADMIN").anyRequest().authenticated())
 				.exceptionHandling(exception -> exception.authenticationEntryPoint(authenticationEntryPoint)
 						.accessDeniedHandler(accessDeniedHandler))
 				.addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
