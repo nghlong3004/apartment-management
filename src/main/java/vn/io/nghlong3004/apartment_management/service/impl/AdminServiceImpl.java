@@ -85,7 +85,7 @@ public class AdminServiceImpl implements AdminService {
 	}
 
 	@Override
-	@Transactional()
+	@Transactional
 	public void setOwner(Long roomId, RoomOwnerRequest request) {
 		log.info("Start set owner room with roomId{} for userId: {}", roomId, request.userId());
 		User user = getActiveUserById(request.userId());
@@ -96,16 +96,11 @@ public class AdminServiceImpl implements AdminService {
 			throw new ResourceException(HttpStatus.BAD_REQUEST, ErrorMessageConstant.OCCUPIED_ROOM);
 		}
 
-		Room oldRoom = roomRepository.findByUserId(user.getId());
+		updateOldRoom(user.getId());
+
 		room.setUserId(user.getId());
 		room.setStatus(RoomStatus.SOLD);
 		roomRepository.updateRoom(room);
-
-		if (oldRoom != null) {
-			oldRoom.setUserId(null);
-			oldRoom.setStatus(RoomStatus.AVAILABLE);
-			roomRepository.updateRoom(oldRoom);
-		}
 
 		log.info("Success set owner room with roomId{} for userId: {}", roomId, request.userId());
 	}
@@ -131,6 +126,7 @@ public class AdminServiceImpl implements AdminService {
 	}
 
 	private User getActiveUserById(Long userId) {
+		log.info("Start get active user with ID{} ", userId);
 		User user = userRepository.findById(userId).orElseThrow(() -> {
 			log.warn("User not found with id={}", userId);
 			return new ResourceException(HttpStatus.BAD_REQUEST, ErrorMessageConstant.ID_NOT_FOUND);
@@ -140,7 +136,19 @@ public class AdminServiceImpl implements AdminService {
 			log.warn("User banned with id={}", user.getId());
 			throw new ResourceException(HttpStatus.BAD_REQUEST, ErrorMessageConstant.USER_BANNED);
 		}
+		log.info("Success get active user with ID{} ", userId);
 		return user;
+	}
+
+	private void updateOldRoom(Long id) {
+		Room room = roomRepository.findByUserId(id);
+		if (room != null) {
+			log.info("Start update old room with ID{} for userId: {}", room.getId(), id);
+			room.setUserId(null);
+			room.setStatus(RoomStatus.AVAILABLE);
+			roomRepository.updateRoom(room);
+			log.info("Success update old room with ID{} for userId: {}", room.getId(), id);
+		}
 	}
 
 }
