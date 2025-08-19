@@ -7,10 +7,6 @@ import vn.io.nghlong3004.apartment_management.model.dto.PagedResponse;
 
 public interface FloorService {
 
-	void createJoinRequest(Long floorId, Long roomId);
-
-	void createMoveRequest(Long floorId, Long roomId);
-
 	FloorResponse getFloorWithRooms(Long floorId);
 
 	void updateFloor(Long floorId, FloorRequest floorUpdateRequest);
