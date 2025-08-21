@@ -32,9 +32,16 @@ public final class ErrorMessageConstant {
 	public static final String FLOOR_NAME_ALREADY_EXISTS = "Floor name already exists.";
 
 	// Request
-	public static final String PENDING_REQUEST_EXISTS = "You already have a pending request.";
-	public static final String USER_PENDING_REQUEST = "You already has a pending request.";
-	public static final String PERSON_PENDING_REQUEST = "That person already has a pending request.";
+	public static final String CREATE_REQUEST_FORBIDDEN = "You are not authorized to create this request.";
+	public static final String ROOM_OWNER_MISMATCH = "The room owner of the room you want to switch does not match the room owner you submitted.";
+	public static final String REQUEST_NOT_FOUND = "Request not found.";
+	public static final String ROOM_NOT_AVAILABLE = "This room is not available.";
+	public static final String REQUEST_ALREADY_IN_STATUS = "The request is already in the specified status.";
+	public static final String INVALID_STATUS_TRANSITION = "The requested status transition is not allowed.";
+	public static final String INVALID_STATE = "The requested status transition is not allowed.";
+	public static final String ACTION_FORBIDDEN = "You do not have permission to perform this action.";
+	public static final String ACTIVE_REQUEST_EXISTS_FOR_REQUESTER = "Requester already has an active request.";
+	public static final String ACTIVE_REQUEST_EXISTS_FOR_COUNTERPART = "Counterpart already has an active request.";
 
 	// Resource
 	public static final String ENDPOINT_NOT_FOUND = "Endpoint not found.";

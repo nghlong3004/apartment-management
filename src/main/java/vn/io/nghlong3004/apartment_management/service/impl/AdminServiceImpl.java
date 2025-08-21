@@ -102,6 +102,9 @@ public class AdminServiceImpl implements AdminService {
 		room.setStatus(RoomStatus.SOLD);
 		roomRepository.updateRoom(room);
 
+		user.setFloorId(room.getFloorId());
+		userRepository.update(user);
+
 		log.info("Success set owner room with roomId{} for userId: {}", roomId, request.userId());
 	}
 
