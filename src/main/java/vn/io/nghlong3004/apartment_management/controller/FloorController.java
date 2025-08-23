@@ -21,7 +21,6 @@ import lombok.RequiredArgsConstructor;
 import vn.io.nghlong3004.apartment_management.model.dto.FloorRequest;
 import vn.io.nghlong3004.apartment_management.model.dto.FloorResponse;
 import vn.io.nghlong3004.apartment_management.model.dto.FloorSummary;
-import vn.io.nghlong3004.apartment_management.model.dto.JoinRoomRequest;
 import vn.io.nghlong3004.apartment_management.model.dto.PagedResponse;
 import vn.io.nghlong3004.apartment_management.service.FloorService;
 
@@ -31,20 +30,6 @@ import vn.io.nghlong3004.apartment_management.service.FloorService;
 public class FloorController {
 
 	private final FloorService floorService;
-
-	@PostMapping(value = "/{floorId}", consumes = MediaType.APPLICATION_JSON_VALUE)
-	@ResponseStatus(code = HttpStatus.CREATED)
-	public void joinRoom(@Min(1) @PathVariable("floorId") Long floorId,
-			@RequestBody @Valid JoinRoomRequest joinRoomRequest) {
-		floorService.createJoinRequest(floorId, joinRoomRequest.roomId());
-	}
-
-	@PutMapping(value = "/{floorId}/room/move", consumes = MediaType.APPLICATION_JSON_VALUE)
-	@ResponseStatus(code = HttpStatus.CREATED)
-	public void moveRoom(@Min(1) @PathVariable("floorId") Long floorId,
-			@RequestBody @Valid JoinRoomRequest joinRoomRequest) {
-		floorService.createMoveRequest(floorId, joinRoomRequest.roomId());
-	}
 
 	@GetMapping(value = "/{floorId}", consumes = MediaType.APPLICATION_JSON_VALUE)
 	@ResponseStatus(code = HttpStatus.OK)
