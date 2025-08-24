@@ -30,10 +30,10 @@ public class RoomController {
 
 	private final RoomService roomService;
 
-	@PostMapping(value = "/{floorId}/room", consumes = MediaType.APPLICATION_JSON_VALUE)
+	@PostMapping(value = "/{floorId}/room")
 	@ResponseStatus(code = HttpStatus.CREATED)
-	public void createRoom(@PathVariable @Min(1) Long floorId, @RequestBody @Valid RoomRequest request) {
-		roomService.createRoom(floorId, request);
+	public void createRoom(@PathVariable @Min(1) Long floorId) {
+		roomService.createRoom(floorId);
 	}
 
 	@GetMapping("/{floorId}/room/{roomId}")

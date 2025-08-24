@@ -1,6 +1,8 @@
 package vn.io.nghlong3004.apartment_management.util;
 
 import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public final class HelperUtil {
 	public static final Map<String, String> SORT_WHITELIST = Map.of("id", "id", "name", "name", "managerId",
@@ -19,5 +21,24 @@ public final class HelperUtil {
 		default -> "ASC";
 		};
 		return column + " " + direction;
+	}
+
+	public static String generateRoomName(int floorNumber, int roomNumber) {
+		return String.format("Room %d-%02d", floorNumber, roomNumber);
+	}
+
+	public static String generateFloorName(long floorNumber) {
+		return "Floor " + floorNumber;
+	}
+
+	public static int parseFloorNumber(String floorName) {
+		Pattern pattern = Pattern.compile("\\d+");
+		Matcher matcher = pattern.matcher(floorName);
+
+		if (matcher.find()) {
+			int number = Integer.parseInt(matcher.group());
+			return number;
+		}
+		return 0;
 	}
 }

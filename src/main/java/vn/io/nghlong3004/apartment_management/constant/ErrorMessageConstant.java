@@ -23,13 +23,18 @@ public final class ErrorMessageConstant {
 	public static final String ROOM_ALREADY_RESERVED = "Room is already reserved or sold.";
 	public static final String ROOM_MOVE_NOT_ALLOWED = "Cannot move to a reserved room.";
 	public static final String MOVE_TO_OWN_ROOM_NOT_ALLOWED = "Cannot move to your own room.";
-	public static final String ROOM_ALREADY_NAME = "Room name already exists in this floor.";
+	public static final String INVALID_ROOM_STATUS = "Invalid room status.";
+	public static final String INVALID_USER_ID = "Invalid userId.";
+	public static final String INCONSISTENT_ROOM_STATE = "Inconsistent room state status not to be SOLD.";
+	public static final String ROOM_NUMBER_EXCEEDS_LIMIT = "The room number exceeds the maximum allowed.";
 
 	// Floor
 	public static final String FLOOR_NOT_FOUND = "Floor not found.";
 	public static final String UNABLE_TO_CREATE_FLOOR = "Unale to create floor.";
 	public static final String FLOOR_STILL_HAS_ROOMS = "Floor still has rooms.";
 	public static final String FLOOR_NAME_ALREADY_EXISTS = "Floor name already exists.";
+	public static final String INVALID_FLOOR_NUMBER = "Invalid floor number: must start from 1.";
+	public static final String FLOOR_NUMBER_EXCEEDS_LIMIT = "The floor number exceeds the maximum allowed.";
 
 	// Request
 	public static final String CREATE_REQUEST_FORBIDDEN = "You are not authorized to create this request.";
@@ -47,7 +52,7 @@ public final class ErrorMessageConstant {
 	public static final String ENDPOINT_NOT_FOUND = "Endpoint not found.";
 	public static final String EMAIL_ALREADY_EXISTS = "Email is already in use.";
 	public static final String DATA_CONFLICT = "Data conflict or constraint violation.";
-	public static final String ID_NOT_FOUND = "ID not found.";
+	public static final String ID_NOT_FOUND = "ID user not found.";
 
 	// HTTP
 	public static final String UNSUPPORTED_MEDIA_TYPE = "Unsupported Content-Type.";

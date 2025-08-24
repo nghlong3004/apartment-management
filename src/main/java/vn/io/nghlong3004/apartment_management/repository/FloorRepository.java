@@ -74,13 +74,6 @@ public interface FloorRepository {
 	int decrementRoomCount(Long floorId);
 
 	@Select("""
-			    SELECT 1
-			    FROM floor
-			    WHERE LOWER(name) = LOWER(#{name})
-			""")
-	Optional<Boolean> existsByName(String name);
-
-	@Select("""
 				SELECT COUNT(*)
 				FROM floor
 			""")
@@ -100,5 +93,12 @@ public interface FloorRepository {
 				WHERE id = #{floorId}
 			""")
 	void updateManager(Long floorId, Long managerId);
+
+	@Select("""
+				SELECT 1
+				FROM floor
+				WHERE manager_id = #{managerId}
+			""")
+	Optional<Boolean> managerIdExists(Long managerId);
 
 }
