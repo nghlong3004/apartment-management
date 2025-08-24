@@ -51,18 +51,9 @@ public interface RoomRepository {
 	@Select("""
 			    SELECT 1
 			    FROM room
-			    WHERE floor_id = #{floorId} AND LOWER(name) = LOWER(#{name})
+			    WHERE floor_id = #{floorId} AND id = #{roomId}
 			""")
-	Optional<Boolean> existsByFloorIdAndName(Long floorId, String name);
-
-	@Select("""
-			    SELECT 1
-			      FROM room
-			     WHERE floor_id = #{floorId}
-			       AND LOWER(name) = LOWER(#{name})
-			       AND id <> #{roomId}
-			""")
-	Optional<Boolean> existsByFloorIdAndNameExcludingId(Long floorId, String name, Long roomId);
+	Optional<Boolean> existsByFloorIdAndRoomId(Long floorId, Long roomId);
 
 	@Delete("""
 			    DELETE FROM room

@@ -2,14 +2,17 @@ package vn.io.nghlong3004.apartment_management.service.impl;
 
 import java.util.List;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StopWatch;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import vn.io.nghlong3004.apartment_management.constant.ErrorMessageConstant;
 import vn.io.nghlong3004.apartment_management.exception.ResourceException;
+import vn.io.nghlong3004.apartment_management.model.Floor;
 import vn.io.nghlong3004.apartment_management.model.Room;
 import vn.io.nghlong3004.apartment_management.model.RoomStatus;
 import vn.io.nghlong3004.apartment_management.model.dto.PagedResponse;
@@ -28,6 +31,9 @@ public class RoomServiceImpl implements RoomService {
 	private final RoomRepository roomRepository;
 	private final FloorRepository floorRepository;
 
+	@Value("${apartment.management.room.max-number}")
+	private long maxRoomNumber;
+
 	@Override
 	@Transactional(readOnly = true)
 	public Room getRoom(Long floorId, Long roomId) {
@@ -42,71 +48,63 @@ public class RoomServiceImpl implements RoomService {
 	}
 
 	@Override
-	@Transactional
-	public void reserveRoom(Room room, Long userId) {
-		log.debug("Reserving room: roomId={}, currentStatus={}, newUserId={}", room.getId(), room.getStatus(), userId);
-		room.setStatus(RoomStatus.RESERVED);
-		room.setUserId(userId);
-		roomRepository.updateRoom(room);
-		log.info("Room reserved: roomId={}, newStatus={}, userId={}", room.getId(), room.getStatus(), userId);
-	}
-
-	@Override
 	@Transactional(readOnly = true)
 	public RoomResponse getRoomResponse(Long floorId, Long roomId) {
+		log.info("Fetching room response for floorId={}, roomId={}", floorId, roomId);
 
 		Room room = getRoom(floorId, roomId);
+		log.debug("Found room: id={}, name='{}', status={}", room.getId(), room.getName(), room.getStatus());
 
-		return RoomResponse.from(room);
-	}
+		RoomResponse response = RoomResponse.from(room);
+		log.info("Successfully built RoomResponse for floorId={}, roomId={}", floorId, roomId);
 
-	@Override
-	@Transactional(readOnly = true)
-	public List<Room> getAllRooms(Long floorId) {
-		log.info("Fetching all rooms for floorId={}", floorId);
-		List<Room> rooms = roomRepository.findAllRoomsByFloorId(floorId);
-		if (rooms == null || rooms.isEmpty()) {
-			return List.of();
-		}
-		return rooms;
+		return response;
 	}
 
 	@Override
 	@Transactional
-	public void createRoom(Long floorId, RoomRequest roomCreateRequest) {
-		log.info("Creating room '{}' in floorId={}", roomCreateRequest.name(), floorId);
+	public void createRoom(Long floorId) {
+		log.info("Start creating room in floorId={}", floorId);
 
-		validatorRoom(floorId, roomCreateRequest);
+		String nameRoom = getRoomName(floorId);
 
-		Room room = Room.builder().floorId(floorId).name(roomCreateRequest.name()).status(RoomStatus.AVAILABLE).build();
+		Room room = Room.builder().floorId(floorId).name(nameRoom).status(RoomStatus.AVAILABLE).build();
 
 		roomRepository.insert(room);
+		log.info("Inserted new room with name='{}' into floorId={}", nameRoom, floorId);
+
 		floorRepository.incrementRoomCount(floorId);
+
+		log.info("Successfully created room name='{}' in floorId={}", nameRoom, floorId);
 	}
 
 	@Override
 	@Transactional
-	public void updateRoom(Long floorId, Long roomId, RoomRequest req) {
-		log.info("Updating roomId={} in floorId={} (name='{}', userId={}, status={})", roomId, floorId, req.name(),
-				req.userId(), req.status());
+	public void updateRoom(Long floorId, Long roomId, RoomRequest roomRequest) {
+		log.info("Updating roomId={} in floorId={} with request(status={})", roomId, floorId, roomRequest.status());
 
-		roomRepository.findRoomByFloorIdAndRoomId(floorId, roomId)
-				.orElseThrow(() -> new ResourceException(HttpStatus.NOT_FOUND, ErrorMessageConstant.ROOM_NOT_FOUND));
+		Room room = loadRoomByFloorIdAndRoomId(floorId, roomId);
 
-		if (roomRepository.existsByFloorIdAndNameExcludingId(floorId, req.name(), roomId).orElse(false)) {
-			throw new ResourceException(HttpStatus.CONFLICT, ErrorMessageConstant.ROOM_ALREADY_NAME);
-		}
+		RoomStatus newStatus = resolveStatus(roomRequest, room);
 
-		Room room = Room.builder().id(roomId).floorId(floorId).name(req.name()).userId(req.userId())
-				.status(req.status()).build();
+		validateBasic(newStatus);
+		validateConsistency(newStatus);
+
+		room.setStatus(newStatus);
+
 		roomRepository.updateRoom(room);
 
+		log.info("Updated roomId={} in floorId={} -> userId={}, status={}", roomId, floorId, newStatus);
 	}
 
 	@Override
 	@Transactional
 	public void deleteRoom(Long floorId, Long roomId) {
 		log.info("Deleting roomId={} in floorId={}", roomId, floorId);
+
+		if (!roomRepository.existsByFloorIdAndRoomId(floorId, roomId).orElse(false)) {
+			throw new ResourceException(HttpStatus.BAD_REQUEST, ErrorMessageConstant.ROOM_NOT_FOUND);
+		}
 
 		roomRepository.deleteByIdAndFloorId(roomId, floorId);
 		floorRepository.decrementRoomCount(floorId);
@@ -115,7 +113,7 @@ public class RoomServiceImpl implements RoomService {
 	}
 
 	@Override
-	@Transactional
+	@Transactional(readOnly = true)
 	public PagedResponse<RoomResponse> getRooms(Long floorId, String name, int page, int size, String sort) {
 		log.info("Rooms query: floorId={}, name='{}', page={}, size={}, sort={}", floorId, name, page, size, sort);
 
@@ -125,27 +123,26 @@ public class RoomServiceImpl implements RoomService {
 		if (name != null && !name.isBlank()) {
 			return getRoomByName(name, floorId);
 		}
-
 		return getListRoom(floorId, page, size, sort);
 	}
 
-	private void validatorRoom(Long floorId, RoomRequest roomCreateRequest) {
-		floorRepository.floorExists(floorId)
-				.orElseThrow(() -> new ResourceException(HttpStatus.NOT_FOUND, ErrorMessageConstant.FLOOR_NOT_FOUND));
-		if (roomRepository.existsByFloorIdAndName(floorId, roomCreateRequest.name()).orElse(false)) {
-			throw new ResourceException(HttpStatus.BAD_REQUEST, ErrorMessageConstant.ROOM_ALREADY_NAME);
-		}
-
-	}
-
 	private PagedResponse<RoomResponse> getListRoom(Long floorId, int page, int size, String sort) {
-		long t0 = System.nanoTime();
+		StopWatch stopWatch = new StopWatch();
+		stopWatch.start();
+
+		log.info("Fetching room list for floorId={}, page={}, size={}, sort={}", floorId, page, size, sort);
+
 		String orderBy = HelperUtil.normalizeSort(sort);
 		int safePage = Math.max(page, 0);
 		int safeSize = Math.max(size, 1);
 		int offset = safePage * safeSize;
 
+		log.debug("Normalized params: safePage={}, safeSize={}, orderBy='{}', offset={}", safePage, safeSize, orderBy,
+				offset);
+
 		long total = roomRepository.countByFloorId(floorId);
+		log.debug("Total rooms found for floorId={}: {}", floorId, total);
+
 		List<Room> rooms = total == 0 ? List.of()
 				: roomRepository.findPageByFloorId(floorId, orderBy, safeSize, offset);
 
@@ -156,23 +153,89 @@ public class RoomServiceImpl implements RoomService {
 		PagedResponse<RoomResponse> resp = PagedResponse.<RoomResponse>builder().content(content).page(safePage)
 				.size(safeSize).totalElements(total).totalPages(Math.max(totalPages, 1)).build();
 
-		log.debug("Rooms(list) -> fetched={}, total={}, timeMs={}", content.size(), total,
-				(System.nanoTime() - t0) / 1_000_000.0);
+		stopWatch.stop();
+		log.info("Successfully fetched {} rooms (of total={}) for floorId={}, totalPages={}, Elapsed time={} ms",
+				content.size(), total, floorId, totalPages, stopWatch.getTotalTimeMillis());
+
 		return resp;
 	}
 
 	private PagedResponse<RoomResponse> getRoomByName(String currentName, Long floorId) {
-		long t0 = System.nanoTime();
+		StopWatch stopWatch = new StopWatch();
+		stopWatch.start();
+		log.info("Fetching room by name='{}' in floorId={}", currentName, floorId);
+
 		final String name = currentName.trim();
-		Room room = roomRepository.findByFloorIdAndName(floorId, name)
-				.orElseThrow(() -> new ResourceException(HttpStatus.NOT_FOUND, ErrorMessageConstant.ROOM_NOT_FOUND));
+		log.debug("Normalized room name='{}'", name);
+
+		Room room = roomRepository.findByFloorIdAndName(floorId, name).orElseThrow(() -> {
+			log.error("Room not found with name='{}' in floorId={}", name, floorId);
+			return new ResourceException(HttpStatus.NOT_FOUND, ErrorMessageConstant.ROOM_NOT_FOUND);
+		});
+
+		log.debug("Found room: id={}, name='{}', floorId={}", room.getId(), room.getName(), room.getFloorId());
 
 		RoomResponse dto = RoomResponse.from(room);
 
 		PagedResponse<RoomResponse> resp = PagedResponse.<RoomResponse>builder().content(List.of(dto)).page(0).size(1)
 				.totalElements(1L).totalPages(1).build();
 
-		log.debug("Rooms(byName) -> 1 item, elapsedMs={}", (System.nanoTime() - t0) / 1_000_000.0);
+		stopWatch.stop();
+		log.info("Successfully fetched room by name='{}' in floorId={}, elapsedMs={}", name, floorId,
+				stopWatch.getTotalTimeMillis());
+
 		return resp;
 	}
+
+	private String getRoomName(Long floorId) {
+		log.info("Start generating room name for floorId={}", floorId);
+
+		Floor floor = floorRepository.findById(floorId).orElseThrow(() -> {
+			log.error("Floor not found with id={}", floorId);
+			return new ResourceException(HttpStatus.BAD_REQUEST, ErrorMessageConstant.FLOOR_NOT_FOUND);
+		});
+
+		Integer roomNumber = floor.getRoomCount() + 1;
+		if (roomNumber >= maxRoomNumber) {
+			throw new ResourceException(HttpStatus.BAD_REQUEST, ErrorMessageConstant.ROOM_NUMBER_EXCEEDS_LIMIT);
+		}
+		int floorNumber = HelperUtil.parseFloorNumber(floor.getName());
+
+		log.debug("Parsed floor info: id={}, name={}, floorNumber={}, currentRoomCount={}, nextRoomNumber={}",
+				floor.getId(), floor.getName(), floorNumber, floor.getRoomCount(), roomNumber);
+
+		if (floorNumber == 0) {
+			log.error("Invalid floor number parsed from floorName='{}'", floor.getName());
+			throw new ResourceException(HttpStatus.BAD_REQUEST, ErrorMessageConstant.INVALID_FLOOR_NUMBER);
+		}
+
+		String roomName = HelperUtil.generateRoomName(floorNumber, roomNumber);
+		log.info("Generated roomName='{}' for floorId={}", roomName, floorId);
+
+		return roomName;
+	}
+
+	private Room loadRoomByFloorIdAndRoomId(Long floorId, Long roomId) {
+		return roomRepository.findRoomByFloorIdAndRoomId(floorId, roomId).orElseThrow(() -> {
+			log.error("Room not found: floorId={}, roomId={}", floorId, roomId);
+			return new ResourceException(HttpStatus.NOT_FOUND, ErrorMessageConstant.ROOM_NOT_FOUND);
+		});
+	}
+
+	private RoomStatus resolveStatus(RoomRequest req, Room room) {
+		return (req.status() != null) ? req.status() : room.getStatus();
+	}
+
+	private void validateBasic(RoomStatus status) {
+		if (status == null) {
+			throw new ResourceException(HttpStatus.BAD_REQUEST, ErrorMessageConstant.INVALID_ROOM_STATUS);
+		}
+	}
+
+	private void validateConsistency(RoomStatus status) {
+		if (status == RoomStatus.SOLD) {
+			throw new ResourceException(HttpStatus.BAD_REQUEST, ErrorMessageConstant.INCONSISTENT_ROOM_STATE);
+		}
+	}
+
 }
