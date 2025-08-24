@@ -58,7 +58,7 @@ Prometheus metrics exposed on management port:
 
 ```properties
 management.endpoints.web.exposure.include=health,prometheus,swagger-ui,openapi
-management.server.port=10000
+management.server.port=${MANAGEMENT_SERVER_PORT}
 ```
 
 ## Running Locally
