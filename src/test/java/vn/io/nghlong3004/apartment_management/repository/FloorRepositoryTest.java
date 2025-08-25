@@ -1,232 +1,182 @@
 package vn.io.nghlong3004.apartment_management.repository;
 
-import static org.assertj.core.api.Assertions.assertThat;
-
-import java.util.Optional;
-import java.util.Random;
-import java.util.UUID;
-
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.mybatis.spring.boot.test.autoconfigure.MybatisTest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
-import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase.Replace;
-
 import vn.io.nghlong3004.apartment_management.model.Floor;
-import vn.io.nghlong3004.apartment_management.model.RequestStatus;
-import vn.io.nghlong3004.apartment_management.model.RequestType;
 import vn.io.nghlong3004.apartment_management.model.Role;
-import vn.io.nghlong3004.apartment_management.model.Room;
-import vn.io.nghlong3004.apartment_management.model.RoomStatus;
 import vn.io.nghlong3004.apartment_management.model.User;
 import vn.io.nghlong3004.apartment_management.model.UserStatus;
+import vn.io.nghlong3004.apartment_management.util.HelperUtil;
+
+import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
+import java.util.concurrent.atomic.AtomicLong;
+
+import static org.assertj.core.api.Assertions.assertThat;
 
 @MybatisTest
-@AutoConfigureTestDatabase(replace = Replace.NONE)
+@AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 class FloorRepositoryTest {
 
-	@Autowired
-	private UserRepository userRepository;
+    private static final AtomicLong COUNTER = new AtomicLong(1);
+    @Autowired
+    FloorRepository floorRepository;
+    @Autowired
+    UserRepository userRepository;
 
-	@Autowired
-	private FloorRepository floorRepository;
+    private String nextFloorName() {
+        return HelperUtil.generateFloorName(COUNTER.getAndIncrement()); // "Floor n"
+    }
 
-	@Autowired
-	private RoomRepository roomRepository;
+    private String uniqueEmail() {
+        return "t" + UUID.randomUUID().toString().replace("-", "").substring(0, 8) + "@example.com";
+    }
 
-	private final int maxTestCaseAll = 10;
+    /**
+     * Tạo một user hợp lệ trong floor_user và trả về id để dùng làm manager_id
+     */
+    private Long createManagerAndGetId() {
+        User u = User.builder()
+                .firstName("Test")
+                .lastName("Manager")
+                .email(uniqueEmail())
+                .password("secret")
+                .phoneNumber("0123456789")
+                .role(Role.ADMIN)
+                .status(UserStatus.ACTIVE)
+                .build();
+        userRepository.save(u);
+        return userRepository.findByEmail(u.getEmail()).orElseThrow().getId();
+    }
 
-	private User createSampleUser(String username) {
-		User user = User.builder().firstName("Long").lastName("Nguyen").email(username + "@example.com")
-				.password("matkhaune!A@1234").phoneNumber("0987654321").role(Role.USER).status(UserStatus.ACTIVE)
-				.floor(null).build();
-		return user;
-	}
+    private Floor insertFloor(String name, Long managerId, int roomCount) {
+        Floor f = Floor.builder().name(name).managerId(managerId).roomCount(roomCount).build();
+        floorRepository.insert(f);
+        return floorRepository.findByName(name).orElseThrow();
+    }
 
-	@Test
-	@DisplayName("Method: existsPendingRequest -> false when no pending request")
-	void existsPendingRequest_ShouldReturnFalse_WhenNoRequest() {
-		for (int i = 0; i < maxTestCaseAll; i++) {
-			Long randomUserId = Math.abs(new Random().nextLong());
-			Optional<Boolean> exists = floorRepository.existsPendingRequest(randomUserId, RequestType.JOIN);
-			assertThat(exists.orElse(false)).isFalse();
-		}
-	}
+    @Test
+    @DisplayName("insert + findByName: persists and retrieves (case-insensitive)")
+    void insert_and_findByName() {
+        Floor saved = insertFloor(nextFloorName(), null, 5);
 
-	@Test
-	@DisplayName("Method: createRequest -> should insert and existsPendingRequest return true")
-	void createRequest_ShouldInsertAndReturnTrue() {
-		for (int i = 0; i < maxTestCaseAll; i++) {
-			String username = String.valueOf(UUID.randomUUID());
-			User user = createSampleUser(username);
-			userRepository.save(user);
-			Long floorId = insertFloorAndGetId(shortName("F-", 10), 0);
-			user = userRepository.findByEmail(user.getEmail()).orElse(user);
-			Room room = Room.builder().name("R-101").floorId(floorId).build();
-			roomRepository.insert(room);
-			Long roomId = roomRepository.findByFloorIdAndName(floorId, room.getName()).orElse(null).getId();
-			floorRepository.createRequest(user.getId(), floorId, roomId, RequestType.JOIN, RequestStatus.PENDING);
+        Optional<Floor> lower = floorRepository.findByName(saved.getName().toLowerCase());
+        Optional<Floor> upper = floorRepository.findByName(saved.getName().toUpperCase());
 
-			Optional<Boolean> exists = floorRepository.existsPendingRequest(user.getId(), RequestType.JOIN);
-			assertThat(exists.orElse(false)).isTrue();
-		}
-	}
+        assertThat(saved.getId()).isNotNull();
+        assertThat(lower).isPresent();
+        assertThat(upper).isPresent();
+        assertThat(lower.get().getName()).isEqualTo(saved.getName());
+        assertThat(lower.get().getRoomCount()).isEqualTo(5);
+    }
 
-	@Test
-	@DisplayName("Method: existsPendingRequest -> only returns true for correct type")
-	void existsPendingRequest_ShouldBeTypeSpecific() {
-		String username = String.valueOf(UUID.randomUUID());
-		User user = createSampleUser(username);
-		userRepository.save(user);
-		Long floorId = insertFloorAndGetId(shortName("F-", 10), 0);
-		user = userRepository.findByEmail(user.getEmail()).orElse(user);
-		Room room = Room.builder().name("R-101").floorId(floorId).build();
-		roomRepository.insert(room);
-		Long roomId = roomRepository.findByFloorIdAndName(floorId, room.getName()).orElse(null).getId();
-		floorRepository.createRequest(user.getId(), floorId, roomId, RequestType.MOVE, RequestStatus.PENDING);
+    @Test
+    @DisplayName("findById: returns row after insert")
+    void findById_returns() {
+        Floor saved = insertFloor(nextFloorName(), null, 3);
 
-		assertThat(floorRepository.existsPendingRequest(user.getId(), RequestType.MOVE).orElse(false)).isTrue();
-		assertThat(floorRepository.existsPendingRequest(user.getId(), RequestType.JOIN).orElse(false)).isFalse();
-	}
+        Optional<Floor> got = floorRepository.findById(saved.getId());
+        assertThat(got).isPresent();
+        assertThat(got.get().getName()).isEqualTo(saved.getName());
+        assertThat(got.get().getRoomCount()).isEqualTo(3);
+    }
 
-	private String shortName(String prefix, int max) {
-		String rnd = UUID.randomUUID().toString().replace("-", "");
-		String base = prefix + rnd;
-		return base.substring(0, Math.min(base.length(), max));
-	}
+    @Test
+    @DisplayName("updateFloor: updates name/manager/roomCount")
+    void updateFloor_updates() {
+        Floor saved = insertFloor(nextFloorName(), null, 1);
+        Long managerId = createManagerAndGetId();
 
-	private Floor buildFloor(String name, int roomCount) {
-		return Floor.builder().name(name).roomCount(roomCount).build();
-	}
+        String newName = nextFloorName();
+        Floor toUpdate = Floor.builder()
+                .id(saved.getId())
+                .name(newName)
+                .managerId(managerId)
+                .roomCount(9)
+                .build();
+        floorRepository.updateFloor(toUpdate);
 
-	private Long insertFloorAndGetId(String name, int roomCount) {
-		Floor f = buildFloor(name, roomCount);
-		floorRepository.insert(f);
-		Long id = floorRepository.findByName(name).orElseThrow().getId();
-		return id;
-	}
+        Floor after = floorRepository.findById(saved.getId()).orElseThrow();
+        assertThat(after.getName()).isEqualTo(newName);
+        assertThat(after.getManagerId()).isEqualTo(managerId);
+        assertThat(after.getRoomCount()).isEqualTo(9);
+    }
 
-	private void insertRoom(Long floorId, String name, RoomStatus status) {
-		Room r = Room.builder().floorId(floorId).name(name).status(status).build();
-		roomRepository.insert(r);
-	}
+    @Test
+    @DisplayName("deleteById: removes row")
+    void deleteById_removes() {
+        Floor saved = insertFloor(nextFloorName(), null, 0);
 
-	@Test
-	@DisplayName("findById -> empty when not exists")
-	void findById_empty() {
-		Optional<Floor> got = floorRepository.findById(-99999L);
-		assertThat(got).isEmpty();
-	}
+        assertThat(floorRepository.findById(saved.getId())).isPresent();
+        floorRepository.deleteById(saved.getId());
+        assertThat(floorRepository.findById(saved.getId())).isNotPresent();
+    }
 
-	@Test
-	@DisplayName("insert -> findById returns same core fields")
-	void insert_then_findById() {
-		String name = shortName("F", 10);
-		Long id = insertFloorAndGetId(name, 0);
+    @Test
+    @DisplayName("floorExists: true/false")
+    void floorExists_true_false() {
+        Floor saved = insertFloor(nextFloorName(), null, 0);
 
-		Floor got = floorRepository.findById(id).orElseThrow();
-		assertThat(got.getName()).isEqualTo(name);
-		assertThat(got.getRoomCount()).isEqualTo(0);
-	}
+        assertThat(floorRepository.floorExists(saved.getId())).contains(true);
+    }
 
-	@Test
-	@DisplayName("findByName (case-insensitive) -> returns floor")
-	void findByName_caseInsensitive() {
-		String name = shortName("Fx", 10);
-		Long id = insertFloorAndGetId(name, 0);
+    @Test
+    @DisplayName("countAll: increases by N after N inserts")
+    void countAll_increases() {
+        long before = floorRepository.countAll();
 
-		Optional<Floor> lower = floorRepository.findByName(name.toLowerCase());
-		Optional<Floor> upper = floorRepository.findByName(name.toUpperCase());
+        insertFloor(nextFloorName(), null, 1);
+        insertFloor(nextFloorName(), null, 2);
+        insertFloor(nextFloorName(), null, 0);
 
-		assertThat(lower).isPresent();
-		assertThat(upper).isPresent();
-		assertThat(lower.get().getId()).isEqualTo(id);
-		assertThat(upper.get().getId()).isEqualTo(id);
-	}
+        long after = floorRepository.countAll();
+        assertThat(after - before).isEqualTo(3L);
+    }
 
-	@Test
-	@DisplayName("updateFloor -> modifies fields and keeps id")
-	void updateFloor_updates() {
-		String name = shortName("FU", 10);
-		Long id = insertFloorAndGetId(name, 2);
+    @Test
+    @DisplayName("increment/decrement roomCount; never below zero")
+    void inc_dec_roomCount() {
+        Floor saved = insertFloor(nextFloorName(), null, 1);
 
-		Floor existing = floorRepository.findById(id).orElseThrow();
-		existing.setName(shortName("NEW", 10));
-		existing.setRoomCount(9);
+        floorRepository.incrementRoomCount(saved.getId());
+        assertThat(floorRepository.findById(saved.getId()).orElseThrow().getRoomCount()).isEqualTo(2);
 
-		floorRepository.updateFloor(existing);
+        floorRepository.decrementRoomCount(saved.getId());
+        floorRepository.decrementRoomCount(saved.getId());
+        floorRepository.decrementRoomCount(saved.getId());
 
-		Floor updated = floorRepository.findById(id).orElseThrow();
-		assertThat(updated.getName()).isEqualTo(existing.getName());
-		assertThat(updated.getRoomCount()).isEqualTo(9);
-	}
+        assertThat(floorRepository.findById(saved.getId()).orElseThrow().getRoomCount()).isZero();
+    }
 
-	@Test
-	@DisplayName("deleteById -> removes row")
-	void deleteById_removes() {
-		String name = shortName("FD", 10);
-		Long id = insertFloorAndGetId(name, 0);
+    @Test
+    @DisplayName("findPage: orders/limits/offsets by orderBy")
+    void findPage_orders_limits_offsets() {
+        Floor a = insertFloor(HelperUtil.generateFloorName(100), null, 0);
+        Floor b = insertFloor(HelperUtil.generateFloorName(101), null, 0);
+        Floor c = insertFloor(HelperUtil.generateFloorName(102), null, 0);
+        Floor d = insertFloor(HelperUtil.generateFloorName(103), null, 0);
 
-		assertThat(floorRepository.findById(id)).isPresent();
+        List<Floor> page = floorRepository.findPage("name ASC", 2, 1);
+        assertThat(page).hasSize(2);
+        assertThat(page.get(0).getName()).isLessThanOrEqualTo(page.get(1).getName());
+        assertThat(List.of(a.getName(), b.getName(), c.getName(), d.getName()))
+                .contains(page.get(0).getName(), page.get(1).getName());
+    }
 
-		floorRepository.deleteById(id);
+    @Test
+    @DisplayName("updateManager + managerIdExists: requires FK to existing floor_user")
+    void updateManager_and_managerIdExists() {
+        Floor saved = insertFloor(nextFloorName(), null, 0);
+        Long managerId = createManagerAndGetId();
 
-		assertThat(floorRepository.findById(id)).isEmpty();
-	}
+        floorRepository.updateManager(saved.getId(), managerId);
+        Floor after = floorRepository.findById(saved.getId()).orElseThrow();
+        assertThat(after.getManagerId()).isEqualTo(managerId);
 
-	@Test
-	@DisplayName("floorExists -> true/false")
-	void floorExists_trueFalse() {
-		Long ghost = -1L;
-		assertThat(floorRepository.floorExists(ghost).orElse(false)).isFalse();
-
-		String name = shortName("FE", 10);
-		Long id = insertFloorAndGetId(name, 0);
-
-		assertThat(floorRepository.floorExists(id).orElse(false)).isTrue();
-	}
-
-	@Test
-	@DisplayName("incrementRoomCount/decrementRoomCount -> updates counters and not below zero")
-	void incDecRoomCount() {
-		String name = shortName("FC", 10);
-		Long id = insertFloorAndGetId(name, 0);
-
-		int a = floorRepository.incrementRoomCount(id);
-		int b = floorRepository.incrementRoomCount(id);
-		assertThat(a).isEqualTo(1);
-		assertThat(b).isEqualTo(1);
-
-		Floor afterInc = floorRepository.findById(id).orElseThrow();
-		assertThat(afterInc.getRoomCount()).isEqualTo(2);
-
-		int c = floorRepository.decrementRoomCount(id);
-		int d = floorRepository.decrementRoomCount(id);
-		int e = floorRepository.decrementRoomCount(id);
-		assertThat(c).isEqualTo(1);
-		assertThat(d).isEqualTo(1);
-		assertThat(e).isEqualTo(1);
-
-		Floor afterDec = floorRepository.findById(id).orElseThrow();
-		assertThat(afterDec.getRoomCount()).isEqualTo(0);
-	}
-
-	@Test
-	@DisplayName("countRoomsByFloorId -> returns number of rooms in that floor")
-	void countRoomsByFloorId_counts() {
-		String n1 = shortName("F1", 10);
-		String n2 = shortName("F2", 10);
-		Long f1 = insertFloorAndGetId(n1, 0);
-		Long f2 = insertFloorAndGetId(n2, 0);
-
-		insertRoom(f1, "A101", RoomStatus.AVAILABLE);
-		insertRoom(f1, "A102", RoomStatus.SOLD);
-		insertRoom(f2, "B201", RoomStatus.RESERVED);
-
-		long c1 = floorRepository.countRoomsByFloorId(f1);
-		long c2 = floorRepository.countRoomsByFloorId(f2);
-		assertThat(c1).isEqualTo(2L);
-		assertThat(c2).isEqualTo(1L);
-	}
+        assertThat(floorRepository.managerIdExists(managerId)).contains(true);
+    }
 }

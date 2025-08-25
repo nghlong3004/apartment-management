@@ -1,6 +1,8 @@
 package vn.io.nghlong3004.apartment_management.controller;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -44,17 +46,15 @@ class RoomControllerTest {
 	private ArgumentCaptor<RoomRequest> roomRequestCaptor;
 
 	private RoomRequest sampleRequest() {
-		RoomRequest r = new RoomRequest("R101", 99L, RoomStatus.RESERVED);
-		return r;
+		return new RoomRequest(RoomStatus.RESERVED);
 	}
 
 	private PagedResponse<RoomResponse> sampleResponse(Long id, Long floorId, String name, Long userId,
 			RoomStatus status) {
 		RoomResponse dto = new RoomResponse(id, floorId, userId, name, status);
 
-		PagedResponse<RoomResponse> resp = PagedResponse.<RoomResponse>builder().content(List.of(dto)).page(0).size(1)
-				.totalElements(1L).totalPages(1).build();
-		return resp;
+		return PagedResponse.<RoomResponse>builder().content(List.of(dto)).page(0).size(1).totalElements(1L)
+				.totalPages(1).build();
 	}
 
 	private PagedResponse<RoomResponse> samplePage() {
@@ -68,13 +68,11 @@ class RoomControllerTest {
 	@DisplayName("POST /{floorId}/room -> delegates to service.createRoom with same args")
 	void createRoom_delegates() {
 		Long floorId = 10L;
-		RoomRequest req = sampleRequest();
 
-		controller.createRoom(floorId, req);
+		controller.createRoom(floorId);
 
-		verify(roomService).createRoom(longCaptor1.capture(), roomRequestCaptor.capture());
+		verify(roomService).createRoom(longCaptor1.capture());
 		assertThat(longCaptor1.getValue()).isEqualTo(floorId);
-		assertThat(roomRequestCaptor.getValue()).isEqualTo(req);
 	}
 
 	@Test
@@ -90,7 +88,7 @@ class RoomControllerTest {
 
 		PagedResponse<RoomResponse> got = controller.rooms(floorId, null, page, size, sort);
 
-		verify(roomService).getRooms(longCaptor1.capture(), null, intCaptor1.capture(), intCaptor2.capture(),
+		verify(roomService).getRooms(longCaptor1.capture(), isNull(), intCaptor1.capture(), intCaptor2.capture(),
 				stringCaptor.capture());
 		assertThat(longCaptor1.getValue()).isEqualTo(floorId);
 		assertThat(intCaptor1.getValue()).isEqualTo(page);
@@ -133,7 +131,7 @@ class RoomControllerTest {
 
 		PagedResponse<RoomResponse> got = controller.rooms(floorId, roomName, 0, 0, null);
 
-		verify(roomService).getRooms(longCaptor1.capture(), stringCaptor.capture(), 0, 0, null);
+		verify(roomService).getRooms(longCaptor1.capture(), stringCaptor.capture(), eq(0), eq(0), isNull());
 		assertThat(longCaptor1.getValue()).isEqualTo(floorId);
 		assertThat(stringCaptor.getValue()).isEqualTo(roomName);
 

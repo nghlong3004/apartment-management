@@ -1,13 +1,5 @@
 package vn.io.nghlong3004.apartment_management.controller;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
-
-import java.lang.reflect.Method;
-import java.util.Random;
-
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -15,157 +7,148 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Captor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
-import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.http.HttpStatus;
-import org.springframework.web.bind.annotation.ResponseStatus;
-
-import vn.io.nghlong3004.apartment_management.model.dto.FloorRequest;
 import vn.io.nghlong3004.apartment_management.model.dto.FloorResponse;
-import vn.io.nghlong3004.apartment_management.model.dto.JoinRoomRequest;
+import vn.io.nghlong3004.apartment_management.model.dto.FloorSummary;
+import vn.io.nghlong3004.apartment_management.model.dto.PagedResponse;
 import vn.io.nghlong3004.apartment_management.service.FloorService;
+
+import java.util.List;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.isNull;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class FloorControllerTest {
 
-	@Mock
-	private FloorService floorService;
+    @Mock
+    private FloorService floorService;
 
-	@InjectMocks
-	private FloorController floorController;
+    @InjectMocks
+    private FloorController controller;
 
-	@Captor
-	private ArgumentCaptor<Long> floorIdCaptor;
+    @Captor
+    private ArgumentCaptor<Long> longCaptor;
+    @Captor
+    private ArgumentCaptor<String> stringCaptor;
+    @Captor
+    private ArgumentCaptor<Integer> intCaptor1;
+    @Captor
+    private ArgumentCaptor<Integer> intCaptor2;
+    @Captor
+    private ArgumentCaptor<String> sortCaptor;
 
-	@Captor
-	private ArgumentCaptor<Long> roomIdCaptor;
+    private FloorSummary sum(long id, String name, Long managerId, int roomCount) {
+        return FloorSummary.builder()
+                .id(id)
+                .name(name)
+                .managerId(managerId)
+                .roomCount(roomCount)
+                .build();
+    }
 
-	@Captor
-	private ArgumentCaptor<Long> longCaptor;
+    private PagedResponse<FloorSummary> samplePage() {
+        return PagedResponse.<FloorSummary>builder()
+                .content(List.of(
+                        sum(1L, "Floor 1", 10L, 5),
+                        sum(2L, "Floor 2", 11L, 7)))
+                .page(0).size(2).totalElements(8).totalPages(4)
+                .build();
+    }
 
-	private JoinRoomRequest createSampleJoinRoomRequest() {
-		long roomId = Math.abs(new Random().nextLong(1_000_000)) + 1;
-		return new JoinRoomRequest(roomId);
-	}
+    @Test
+    @DisplayName("GET /{floorId} -> returns FloorResponse and delegates correctly")
+    void getFloor_returns_and_delegates() {
+        Long floorId = 123L;
+        FloorResponse expected = org.mockito.Mockito.mock(FloorResponse.class);
 
-	@Test
-	@DisplayName("POST /api/v1/floor/{floorId} -> should delegate to FloorService.createJoinRequest")
-	void joinRoom_ShouldDelegateToService() {
-		long floorId = Math.abs(new Random().nextLong(1_000_000)) + 1;
-		JoinRoomRequest req = createSampleJoinRoomRequest();
+        when(floorService.getFloorWithRooms(floorId)).thenReturn(expected);
 
-		floorController.joinRoom(floorId, req);
+        FloorResponse got = controller.getFloor(floorId);
 
-		verify(floorService).createJoinRequest(floorIdCaptor.capture(), roomIdCaptor.capture());
-		Assertions.assertEquals(floorId, floorIdCaptor.getValue());
-		Assertions.assertEquals(req.roomId(), roomIdCaptor.getValue());
-	}
+        verify(floorService).getFloorWithRooms(longCaptor.capture());
+        assertThat(longCaptor.getValue()).isEqualTo(floorId);
+        assertThat(got).isSameAs(expected);
+    }
 
-	@Test
-	@DisplayName("PUT /api/v1/floor/{floorId} -> should delegate to FloorService.createMoveRequest")
-	void moveRoom_ShouldDelegateToService() {
-		long floorId = Math.abs(new Random().nextLong(1_000_000)) + 1;
-		JoinRoomRequest req = createSampleJoinRoomRequest();
+    @Test
+    @DisplayName("GET / (no name) -> returns paged list and delegates with paging/sort")
+    void listFloors_paged_noName() {
+        String name = null;
+        int page = 2;
+        int size = 50;
+        String sort = "id,desc";
 
-		floorController.moveRoom(floorId, req);
+        PagedResponse<FloorSummary> expected = samplePage();
+        when(floorService.getFloors(name, page, size, sort)).thenReturn(expected);
 
-		verify(floorService).createMoveRequest(floorIdCaptor.capture(), roomIdCaptor.capture());
-		Assertions.assertEquals(floorId, floorIdCaptor.getValue());
-		Assertions.assertEquals(req.roomId(), roomIdCaptor.getValue());
-	}
+        PagedResponse<FloorSummary> got = controller.floors(name, page, size, sort);
 
-	@Test
-	@DisplayName("POST /api/v1/floor/{floorId} -> annotated with @ResponseStatus(CREATED)")
-	void joinRoom_ShouldHaveCreatedResponseStatusAnnotation() throws NoSuchMethodException {
-		Method m = FloorController.class.getMethod("joinRoom", Long.class, JoinRoomRequest.class);
-		ResponseStatus rs = m.getAnnotation(ResponseStatus.class);
-		Assertions.assertNotNull(rs, "Missing @ResponseStatus on joinRoom");
-		Assertions.assertEquals(HttpStatus.CREATED, rs.code());
-	}
+        verify(floorService).getFloors(
+                isNull(),
+                intCaptor1.capture(),
+                intCaptor2.capture(),
+                sortCaptor.capture());
 
-	@Test
-	@DisplayName("PUT /api/v1/floor/{floorId} -> annotated with @ResponseStatus(CREATED)")
-	void moveRoom_ShouldHaveCreatedResponseStatusAnnotation() throws NoSuchMethodException {
-		Method m = FloorController.class.getMethod("moveRoom", Long.class, JoinRoomRequest.class);
-		ResponseStatus rs = m.getAnnotation(ResponseStatus.class);
-		Assertions.assertNotNull(rs, "Missing @ResponseStatus on moveRoom");
-		Assertions.assertEquals(HttpStatus.CREATED, rs.code());
-	}
+        assertThat(intCaptor1.getValue()).isEqualTo(page);
+        assertThat(intCaptor2.getValue()).isEqualTo(size);
+        assertThat(sortCaptor.getValue()).isEqualTo(sort);
 
-	@Test
-	@DisplayName("POST /{floorId} -> delegates to floorService.createJoinRequest with floorId & roomId")
-	void joinRoom_delegates() {
-		Long floorId = 10L;
-		Long roomId = 200L;
-		JoinRoomRequest req = new JoinRoomRequest(roomId);
+        assertThat(got).isEqualTo(expected);
+        assertThat(got.getContent()).hasSize(2);
+        assertThat(got.getPage()).isEqualTo(0);
+        assertThat(got.getTotalElements()).isEqualTo(8);
+    }
 
-		floorController.joinRoom(floorId, req);
+    @Test
+    @DisplayName("GET /?name=... -> returns filtered floors by name")
+    void listFloors_withName() {
+        String name = "Floor 1";
+        int page = 0;
+        int size = 20;
+        String sort = "id,asc";
 
-		verify(floorService).createJoinRequest(longCaptor.capture(), longCaptor.capture());
-		var args = longCaptor.getAllValues();
-		assertThat(args.get(0)).isEqualTo(floorId);
-		assertThat(args.get(1)).isEqualTo(roomId);
-	}
+        PagedResponse<FloorSummary> expected = PagedResponse.<FloorSummary>builder()
+                .content(List.of(sum(1L, "Floor 1", 10L, 5)))
+                .page(0).size(1).totalElements(1).totalPages(1).build();
 
-	@Test
-	@DisplayName("PUT /{floorId}/room/move -> delegates to floorService.createMoveRequest")
-	void moveRoom_delegates() {
-		Long floorId = 11L;
-		Long roomId = 201L;
-		JoinRoomRequest req = new JoinRoomRequest(roomId);
+        when(floorService.getFloors(name, page, size, sort)).thenReturn(expected);
 
-		floorController.moveRoom(floorId, req);
+        PagedResponse<FloorSummary> got = controller.floors(name, page, size, sort);
 
-		verify(floorService).createMoveRequest(longCaptor.capture(), longCaptor.capture());
-		var args = longCaptor.getAllValues();
-		assertThat(args.get(0)).isEqualTo(floorId);
-		assertThat(args.get(1)).isEqualTo(roomId);
-	}
+        verify(floorService).getFloors(
+                stringCaptor.capture(),
+                intCaptor1.capture(),
+                intCaptor2.capture(),
+                sortCaptor.capture());
 
-	@Test
-	@DisplayName("GET /{floorId} -> returns FloorResponse from service")
-	void getFloor_returnsResponse() {
-		Long floorId = 12L;
-		FloorResponse expected = Mockito.mock(FloorResponse.class);
+        assertThat(stringCaptor.getValue()).isEqualTo(name);
+        assertThat(intCaptor1.getValue()).isEqualTo(page);
+        assertThat(intCaptor2.getValue()).isEqualTo(size);
+        assertThat(sortCaptor.getValue()).isEqualTo(sort);
 
-		when(floorService.getFloorWithRooms(floorId)).thenReturn(expected);
+        assertThat(got).isEqualTo(expected);
+        assertThat(got.getContent()).hasSize(1);
+        assertThat(got.getContent().get(0).getName()).isEqualTo("Floor 1");
+    }
 
-		FloorResponse got = floorController.getFloor(floorId);
+    @Test
+    @DisplayName("POST / -> delegates to service.createFloor")
+    void createFloor_delegates() {
+        controller.createFloor();
+        verify(floorService).createFloor();
+    }
 
-		verify(floorService).getFloorWithRooms(longCaptor.capture());
-		assertThat(longCaptor.getValue()).isEqualTo(floorId);
-		assertThat(got).isSameAs(expected);
-	}
+    @Test
+    @DisplayName("DELETE /{floorId} -> delegates to service.deleteFloor")
+    void deleteFloor_delegates() {
+        Long floorId = 999L;
 
-	@Test
-	@DisplayName("PUT /{floorId} -> delegates to floorService.updateFloor")
-	void updateFloor_delegates() {
-		Long floorId = 13L;
-		FloorRequest request = Mockito.mock(FloorRequest.class);
+        controller.deleteFloor(floorId);
 
-		floorController.updateFloor(floorId, request);
-
-		verify(floorService).updateFloor(floorId, request);
-	}
-
-	@Test
-	@DisplayName("POST / -> delegates to floorService.addFloor")
-	void addFloor_delegates() {
-		FloorRequest request = Mockito.mock(FloorRequest.class);
-
-		floorController.addFloor(request);
-
-		verify(floorService).addFloor(request);
-	}
-
-	@Test
-	@DisplayName("DELETE /{floorId} -> delegates to floorService.deleteFloor")
-	void deleteFloor_delegates() {
-		Long floorId = 14L;
-
-		floorController.deleteFloor(floorId);
-
-		verify(floorService).deleteFloor(longCaptor.capture());
-		assertThat(longCaptor.getValue()).isEqualTo(floorId);
-	}
+        verify(floorService).deleteFloor(longCaptor.capture());
+        assertThat(longCaptor.getValue()).isEqualTo(floorId);
+    }
 }
