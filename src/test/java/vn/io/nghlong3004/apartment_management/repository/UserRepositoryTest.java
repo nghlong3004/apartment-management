@@ -22,18 +22,20 @@ import vn.io.nghlong3004.apartment_management.model.UserStatus;
 @AutoConfigureTestDatabase(replace = Replace.NONE)
 class UserRepositoryTest {
 
+	private final int maxTestCaseAll = 10;
 	@Value("${jwt.refresh-token-expiration-ms}")
 	private long refreshTokenExpirationMs;
-
 	@Autowired
 	private UserRepository userRepository;
 
-	private final int maxTestCaseAll = 10;
-
 	private User createSampleUser(String username) {
-		User user = User.builder().firstName("Long").lastName("Nguyen").email(username + "@example.com")
-				.password("matkhaune!A@1234").phoneNumber("0987654321").role(Role.USER).status(UserStatus.ACTIVE)
-				.floor(null).build();
+		String firstName = UUID.randomUUID().toString().replace("-", "");
+		String lastName = UUID.randomUUID().toString().replace("-", "");
+		String email = UUID.randomUUID().toString().replace("-", "");
+		String password = UUID.randomUUID().toString().replace("-", "");
+		User user = User.builder().firstName(firstName).lastName(lastName).email(email + "@example.com")
+				.password(password).phoneNumber("0987654321").role(Role.USER).status(UserStatus.ACTIVE).floorId(null)
+				.build();
 		return user;
 	}
 
@@ -53,11 +55,10 @@ class UserRepositoryTest {
 	void existsByEmail_WhenEmailExistsShould_ReturnTrue() {
 		for (int i = 0; i < maxTestCaseAll; ++i) {
 			String username = UUID.randomUUID().toString();
+			User user = createSampleUser(username);
+			userRepository.save(user);
 
-			userRepository.save(createSampleUser(username));
-
-			Optional<Boolean> exists = userRepository.existsByEmail(username + "@example.com");
-
+			Optional<Boolean> exists = userRepository.existsByEmail(user.getEmail());
 			Assertions.assertThat(exists.orElse(false)).isEqualTo(true);
 		}
 	}
